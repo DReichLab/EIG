@@ -1,0 +1,82 @@
+EIGENSOFT version 6.0.1, 12/12/14 (for Linux only)
+
+The EIGENSOFT package implements methods from the following 2 papers:
+Patterson et al. 2006 PLoS Genet 2:e190 (population structure)
+Price et al. 2006 Nat Genet 38:904-9 (EIGENSTRAT stratification correction)
+
+NEW features of EIGENSOFT version 6.0.1 include:
+-- Minor bug fix which prevents smartpca from trying to print out eigenvalues
+  if fastmode is set.
+
+NEW features of EIGENSOFT version 6.0beta included:
+-- New option fastmode which implements a very fast pca approximation.
+   See POPGEN/README and Galinsky 2014 ASHG talk.
+-- Changes to external packages required.  EIGENSOFT version 5.0.2 required
+   lapack + blas.  On the other hand, EIGENSOFT version 6.0beta requires 
+   GSL + lapack + OpenBLAS (but does not require the native version of blas).
+   The Makefile has been changed accordingly.
+-- EIGENSOFT version 6.0beta supports multi-threading.  See POPGEN/README.
+-- Bug fix for ldregress option.
+
+See CONVERTF/README for documentation of programs for converting file formats.
+See POPGEN/README for documentation of population structure programs.
+See EIGENSTRAT/README for documentation of EIGENSTRAT programs.
+
+Questions?
+See http://www.hsph.harvard.edu/faculty/alkes-price/files/eigensoftfaq.htm
+or email Samuela Pollack, spollack@hsph.harvard.edu
+
+Executables and source code:
+----------------------------
+All C executables are in the bin/ directory.
+
+We have placed source code for all C executables in the src/ directory, 
+for users who wish to modify and recompile our programs.  For example, to
+recompile the eigenstrat program, type
+"cd src"
+"make eigenstrat"      
+"mv eigenstrat ../bin"
+
+Note that some of our software will only compile if your system has the
+GSL + lapack + OpenBLAS packages installed.
+
+If you have trouble compiling and running our code, try compiling and
+running the pcatoy program in the src directory:
+"cd src"
+"make pcatoy"
+"./pcatoy"
+If you are unable to run the pcatoy program successfully, please contact
+your system administrator for help, as this is a systems issue which is
+beyond our scope.  Your system administrator will be able to troubleshoot
+your systems issue using this trivial program.  [You can also try running
+the pcatoy program in the bin directory, which we have already compiled.]
+
+To remake the entire package:
+"cd src"
+"make clobber"
+"make install"
+
+To remake EIG6.0 it is necessary to link to the OpenBLAS library. On orchestra, 
+the path is /opt/openblas and should work automatically. On Broad institute machines,
+the user should execute "use .openblas-0.2.8" and "use GCC-4.9" at the command 
+prompt before attempting to remake. All other users should install OpenBLAS and 
+set the variable OPENBLAS to the path at the make command line, 
+e.g. "make install OPENBLAS=/usr/local/openblas"
+
+----------------------------
+Acknowledgements:
+EIGENSOFT was written by Nick Patterson, Alkes Price, Samuela Pollack,
+Kevin Galinsky, Chris Chang, and Sasha Gusev.
+
+We thank John Novembre and Mike Boursnell for code improvements, Matt Hanna 
+for the first implementation of multi-threading, and Angela Yu for a bugfix. 
+
+----------------------------
+SOFTWARE COPYRIGHT NOTICE AGREEMENT
+This software and its documentation are copyright (2010) by Harvard University 
+and The Broad Institute. All rights are reserved. This software is supplied 
+without any warranty or guaranteed support whatsoever. Neither Harvard 
+University nor The Broad Institute can be responsible for its use, misuse, or 
+functionality. The software may be freely copied for non-commercial purposes, 
+provided this copyright notice is retained.
+

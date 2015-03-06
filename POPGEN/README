@@ -1,0 +1,353 @@
+See ../README for high-level documentation of the entire EIGENSOFT package.
+
+New features of EIGENSOFT version 6.0beta documented in this README file:
+-- New option fastmode which implements a very fast pca approximation.
+   See POPGEN/README and Galinsky 2014 ASHG talk.
+-- EIGENSOFT version 6.0beta supports multi-threading.
+
+This file contains documentation of population structure programs:
+  smartpca: run Principal Components Analysis on input genotype data.
+  ploteig: construct plot of top 2 principal components
+  twstats: compute number of statistically significant principal components.
+  evec2pca.perl: convert eigenvector file to format needed for EIGENSTRAT  
+  smartrel: identify related samples, accounting for population structure
+
+------------------------------------------------------------------------
+
+DOCUMENTATION OF smartpca program:
+
+smartpca runs Principal Components Analysis on input genotype data and 
+  outputs principal components (eigenvectors) and eigenvalues.  We note that
+  eigenvalue_k/(Sum of eigenvalues) is the proportion of variance explained by 
+  eigenvector_k.  The method assumes that samples are unrelated.  
+  (However, a small number of cryptically related individuals is usually 
+  not a problem in practice as they will typically be discarded as outliers.)
+
+5 different input formats are supported.  See ../CONVERTF/README
+for documentation on using the convertf program to convert between formats.
+
+The syntax of smartpca is "../bin/smartpca -p parfile".  We illustrate 
+how parfile works via a toy example (see example.perl in this directory).  
+This example takes input in EIGENSTRAT format.  The syntax of how to take input
+in other formats is analogous to the convertf program, see ../CONVERTF/README.
+
+The smartpca program prints various statistics to standard output.
+To redirect this information to a file, change the above syntax to
+"../bin/smartpca -p parfile >logfile".  For a description of these
+statistics, see the documentation file smartpca.info in this directory.
+
+Estimated running time of the smartpca program is
+(these times are on our system, with no multi-threading)
+  2.5e-12 * nSNP * NSAMPLES^2 hours            if not removing outliers.
+  2.5e-12 * nSNP * NSAMPLES^2 hours * (1+m)    if m outlier removal iterations.
+Thus, under the default of up to 5 outlier removal iterations, running time is
+  up to 1.5e-11 * nSNP * NSAMPLES^2 hours.
+
+Estimated running time of smartpca with fastmode: YES is
+  1e-10 * nSNP * NSAMPLES hours                if not removing outliers.
+
+Note: some users have reported problems running smartpca on
+data sets involving QTL data sets stored in a .ped file.  The reason
+for this is that in .ped files the QTL value is stored in the
+population field, but our code does not allow more than 100 different
+population values.  A solution is to convert to EIGENSTRAT format
+using the convertf program (see ../CONVERTF/) and then modify the
+last column of the individual file to contain the same population name
+(any string will do) for every row.  This should be easy to do using a
+PERL script (this functionality is not currently implemented in our code).
+
+DESCRIPTION OF EACH PARAMETER in parfile for smartpca:
+
+genotypename: input genotype file (in any format: see ../CONVERTF/README)
+snpname:      input snp file      (in any format: see ../CONVERTF/README)
+indivname:    input indiv file    (in any format: see ../CONVERTF/README)
+evecoutname:  output file of eigenvectors.  See numoutevec parameter below.
+evaloutname:  output file of all eigenvalues
+
+OPTIONAL PARAMETERS:
+
+numoutevec:     number of eigenvectors to output.  Default is 10.
+numoutlieriter: maximum number of outlier removal iterations.
+  Default is 5.  To turn off outlier removal, set this parameter to 0.
+numoutlierevec: number of principal components along which to 
+  remove outliers during each outlier removal iteration.  Default is 10.
+outliersigmathresh: number of standard deviations which an individual must 
+  exceed, along one of the top (numoutlierevec) principal components, in
+  order for that individual to be removed as an outlier.  Default is 6.0.
+outlieroutname: output logfile of outlier individuals removed. If not specified,
+  smartpca will print this information to stdout, which is the default.
+usenorm: Whether to normalize each SNP by a quantity related to allele freq.
+  Default is YES.  (When analyzing microsatellite data, should be set to NO.
+  See Patterson et al. 2006.)
+altnormstyle: Affects very subtle details in normalization formula.
+  Default is YES (normalization formulas of Patterson et al. 2006)
+  To match EIGENSTRAT (normalization formulas of Price et al. 2006), set to NO.
+missingmode: If set to YES, then instead of doing PCA on # reference alleles,
+  do PCA on whether each data point is missing or nonmissing.  Default is NO.
+  May be useful for detecting informative missingness (Clayton et al. 2005).
+ldregress: If set to a positive integer, then LD regression is turned on,
+  and input to PCA will be the residual of a regression involving that many
+  previous SNPs, according to physical location.  See Patterson et al. 2006.
+  Default is 0 (no LD regression).  If desiring LD correction, we recommend 200.
+ldlimit: If doing LD regression, this is the maximum genetic distance (in
+  Morgans) for previous SNPs used to construct the residual. Default is no
+  maximum, for typical genotype SNP data, 0.001 is sufficient.
+ldposlimit: If doing LD regression, this is the maximum physical distance (in
+  basepairs) for previous SNPs used to construct the residual. Default is no
+  maximum, for typical genotype SNP data, 100000 is sufficient.
+ldr2lo: If doing LD regression, this is the minimum squared correlation to a
+  previous SNP for that SNP to be used in constructing the residual. Default
+  is 0.01.
+ldr2hi: If doing LD regression, this is the minimum squared correlation to a
+  previous SNP for the *current* SNP to be excluded from the computation (so
+  as to avoid a singular matrix in this or future regressions). Default is 0.95.
+grmoutname: Output file prefix containing the lower-triangular of the genetic
+  relatedness matrix (written to [grmoutname]) and ordered sample identifiers
+  (written to [grmoutname].id). Format is compatible with heritability estimation
+  software GCTA (as of v1.13, see: http://www.complextraitgenomics.com/software/gcta/).
+  For direct input to GCTA, ensure that the last four characters of [grmoutname]
+  are ".grm" and gzip the resulting [grmoutname] file.
+grmbinary: If [grmoutname] is specified and this value is set to "YES" then the
+  genetic relatedness matrix will be written in binary format: three files
+  corresponding to the lower-triangular of the GRM ([grmoutname].bin), the number
+  of SNPs used for the computation ([grmoutname].N.bin), and the ordered sample
+  identifiers ([grmoutname].id). See documentation for GCTA (as of v1.13) for 
+  detailed format spec (http://www.complextraitgenomics.com/software/gcta/).
+  Default is NO.
+poplistname:   If wishing to infer eigenvectors using only individuals from a 
+  subset of populations, and then project individuals from all populations 
+  onto those eigenvectors, this input file contains a list of population names,
+  one population name per line, which will be used to infer eigenvectors.  
+  It is assumed that the population of each individual is specified in the 
+  indiv file.  Default is to use individuals from all populations.
+phylipoutname: output file containing an fst matrix which can be used as input
+  to programs in the PHYLIP package, such as the "fitch" program for
+  constructing phylogenetic trees.
+noxdata:    if set to YES, all SNPs on X chr are excluded from the data set.
+  The smartpca default for this parameter is YES, since different variances 
+  for males vs. females on X chr may confound PCA analysis.
+nomalexhet: if set to YES, any het genotypes on X chr for males are changed
+  to missing data.  The smartpca default for this parameter is YES.
+badsnpname: specifies a list of SNPs which should be excluded from the data set.
+  Same format as example.snp.  Cannot be used if input is in
+  PACKEDPED or PACKEDANCESTRYMAP format.
+popsizelimit: If set to a positive integer, the result is that a randomly
+  selected subset of size popsizelimit individuals from each population 
+  will be included in the analysis. It is assumed that the population of each 
+  individual is specified in the indiv file.  Default is to use all individuals 
+  in the analysis.
+snpweightoutname: output file containing SNP weightings of each
+  principal component.  Note that this output file does not contain entries
+  for monomorphic SNPs from the input .snp file. 
+chrom: Only use SNPs on this chromosome.
+lopos: Only use SNPs with physical position >= this value.
+hipos: Only use SNPs with physical position <= this value.
+blgsize: Size (in Morgans) of blocks used in FST stderr jackknife computation.
+  The default value for this parameter is 0.05.
+qtmode: If set to YES, assume that there is a single population and that the
+  population field contains information on real-valued phenotypes.
+  The default value for this parameter is NO.
+fstonly: If set to YES, then skip PCA and just calculate FST values.  
+  The default value for this parameter is NO.
+killr2: If set to YES, then eliminate SNPs in LD with nearby SNPs.  
+  The default value for this parameter is NO.
+r2thresh: If killr2 is set to YES, then pairs of SNPs that have r-squared 
+  greater than this value will have one member removed.  
+  The default value for this parameter is -1.0.
+r2genlim: If killr2 is set to YES, then pairs of SNPs will only be considered 
+  for elimination based on r-squared if within a genetic distance equal to
+  this number of Morgans. The default value for this parameter is 0.01.
+r2physlim: If killr2 is set to YES, then pairs of SNPs will only be considered
+  for elimination based on r-squared if within a physical distance equal to
+  this number of bases.  The default value for this parameter is 5000000.
+hashcheck:    If set to YES and the input genotype file is in PACKEDANCESTRYMAP
+  format, check the hash stored inside the file to make sure that individual 
+  and SNP files have not changed since the file was made.  If they have, then 
+  exit in error.  The default value for this parameter is YES.  (Use with
+  smartpca is deprecated.  Much better to run convertf and create clean
+  files with correct hash.)
+xregionname:  Name of file which describes regions of the genome to be 
+  excluded from the computation.  Each line of the file should be in the
+  format <chromosome #>   <begin-physical-position>  <end-physical-position>.
+  The excluded region is the closed interval defined by the physical positions.
+  (We recommend excluding the long-range LD regions listed in Table 1 of 
+  Price et al. 2008 Am J Hum Genet.)
+hwfilt:  Filter parameter for Hardy-Weinberg filter.  The (real-valued)
+  number of standard deviations beyond which the filter is applied.
+  (If not specified, then no Hardy-Weinberg filter is applied.)
+  Caution: hwfilt should not be used for admixed populations.
+numchrom:  The number of autosomes in the data set.  The X-chromosome is 
+  assumed to be numchrom+1 and the Y-chromosome is numchrom+2.
+  The default value for numchrom is 22.
+deletesnpoutname:  optional output file in which all deleted SNPs are listed
+  along with the reasons for their deletion.  This file can be used
+  as a badsnp file in subsequent runs.
+
+The next 5 optional parameters allow the user to output genotype, snp and 
+  indiv files which will be identical to the input files except that:
+    Any individuals set to Ignore in the input indiv file will be
+      removed from the data set (see ../CONVERTF/README)
+    Any data excluded or set to missing based on noxdata, nomalexhet and
+      badsnpname parameters (see above) will be removed from the data set.
+    The user may decide to output these files in any format.
+outputformat:    ANCESTRYMAP,  EIGENSTRAT, PED, PACKEDPED or PACKEDANCESTRYMAP
+genotypeoutname: output genotype file
+snpoutname:      output snp file
+indivoutname:    output indiv file
+outputgroup: see documentation in ../CONVERTF/README
+
+outliermode:  mode
+mode should be 0, 1 or 2 
+mode = 2  NO outlier removal 
+mode = 1  when calculating mean and standard deviation of a PC to decide whether to remove a sample the 
+ sample itself is not used.   This may be important for datasets with very small sample sizes (say less than 30).  
+mode = 0  (default) use all samples to compute PC mean and variance. 
+
+lsqproject:  YES 
+PCA projections is carried out by solving least squares equations rather than an orthogonal 
+projection step.  This is approriate if PCs are calculated using samples with little missing data 
+but it is desired to project samples with much missing data onto the top PCs. 
+See ./lsqproject.pdf for a more detailed description.
+
+(NEW)
+fastmode: YES
+Fast pca approximation is used.  See Galinsky 2014 ASHG talk.  In fastmode,
+there is no outlier removal, no Tracy-Widom significance testing,
+no lsqproject mode, and no F_st.  (Use fstonly: YES to produce F_st).
+Additional optional parameters that can be used in conjunction with fastmode:
+fastdim:   (default 2 * numeigs) number of dimensions in fast pca approximation
+fastiter:  (default  numeigs)    number of iterations in fast pca approximation
+
+In fastmode most options are not supported.
+ No outlier removal
+ No fst calculations. Consider rerunning with fstonly:  YES if this is wanted.
+ No lsqproject: YES
+
+(NEW) Multithreading (Code added by Chris Chang)
+smartpca now supports multithreading but NOT with fastmode: YES
+By default a (hopefully) system dependent number of threads is chosen.
+This can be overwritten by (for example)
+numthreads:   10
+
+------------------------------------------------------------------------
+
+DOCUMENTATION OF ploteig program:
+
+ploteig, a PERL program, constructs a plot of the top two principal components 
+(or any specified pair of principal components).  ploteig uses the gnuplot
+utility, and will only work if gnuplot is installed.  ploteig produces output
+in .xtxt (gnuplot control file) format, and in .ps and .pdf formats.
+Files for all output formats will be produced if -x flag is specified.
+
+The syntax of ploteig is
+../bin/ploteig 
+-i example.evec : input file of eigenvectors
+-c 1:2 : which eigenvectors to plot.  Use 1:2 for top two eigenvectors.
+-p Case:Control : which populations from input file to plot.
+-x : make .ps and .pdf files if -x flag is specified.
+-o plot.xtxt : gnuplot output file name.  MUST end in .xtxt.
+               .ps and .pdf output files will have same prefix.
+
+Example: see ./example.perl
+
+For documentation of optional flags to ploteig, type "../bin/ploteig" to
+run ploteig with no input.  Documentation on optional flags will then appear.
+
+-----------------------------------------------------------------------
+
+DOCUMENTATION OF twstats program:
+
+The twstats program computes Tracy-Widom statistics to evaluate the
+statistical significance of each principal component identified by pca
+(Patterson et al. 2006).  
+
+The twstats program assumes a random set of markers, and should not be
+used on data sets of ancestry-informative markers, as admixture-LD may
+violate its underlying assumptions.  (However, all programs except twstats 
+are still applicable in the case of ancestry-informative markers.)
+
+The syntax of twstats is
+../bin/twstats
+-t twtable : input table needed to compute Tracy-Widom statistics
+-i twexample.eval : input file of all eigenvalues
+-o twexample.out  : Tracy-Widom statistics.  The column of interest
+  is the "p-value" column which indicates the statistical significance
+  of each principal component.
+
+OPTIONAL FLAGS:
+
+-n effsize : this flag is important if #samples > #markers, in which case
+  it should be set to (#samples - 1).  In other circumstances, effsize
+  fixes the effective number of markers after account for LD, and
+  most users will want to disregard this flag.
+-m minlen: optional flag which most users will want to disregard.
+  Specifies the minimum number of input eigenvalues -- note that Tracy-Widom
+  statistics are of questionable value when the number of eigenvalues
+  is too small.  If the number of eigenvalues is lower than minlen,
+  NA values will be returned.  The default is minlen = 10.
+
+Example: see ./twexample.perl
+
+-----------------------------------------------------------------------
+
+DOCUMENTATION OF evec2pca.perl program:
+
+The evec2pca.perl program is for users who want to run the EIGENSTRAT
+stratification correction method on on output produced by the smartpca program.
+It converts the .evec file produced by smartpca to the .pca file needed by 
+EIGENSTRAT.  However, if using the smartpca.perl wrapper, evec2pca.perl is 
+called automatically so there is no need to separately run evec2pca.perl.
+See ../EIGENSTRAT/README for details on the smartpca.perl wrapper.
+
+The syntax of evec2pca.perl is
+../bin/evec2pca.perl k example.evec example.ind example.pca, where
+k is the number of principal components in example.evec file (e.g. 10)
+example.evec is file of principal components produced by smartpca
+example.ind is individual file
+example.pca is file of principal components in file needed by eigenstrat
+
+------------------------------------------------------------------------
+
+DOCUMENTATION OF smartrel program:
+
+smartrel is a (currently experimental) program for finding relateds in data 
+where there is population structure (such as African Americans). 
+
+The method of evaluating relatedness is as follows.  For a data set 
+consisting of n samples and m SNPs, the n x n matrix X is first computed
+as described in Patterson et al. 2006.  The the top eigenvectors
+(specified by numeigs parameter) are "killed," yielding a matrix X'.  
+Before this, X has rank (n-1) and after this, it has rank (n-numeigs-1).  
+
+For every pair of samples a correlation coefficient is now computed from 
+an off-diagonal element of X' and the result published if greater than 
+a certain threshhold (specified by relthresh parameter).
+
+After running smartrel, it may be desirable to remove related individuals
+  and then rerun smartpca.
+
+The syntax of smartrel is "../bin/smartrel -p parfile".  
+
+DESCRIPTION OF EACH PARAMETER in parfile for smartrel:
+
+genotypename: input genotype file (in any format: see ../CONVERTF/README)
+snpname:      input snp file      (in any format: see ../CONVERTF/README)
+indivname:    input indiv file    (in any format: see ../CONVERTF/README)
+outputname:   name of output file of pairwise correlation coefficients.
+numeigs:      number of eigenvectors to "kill" when computing covariance
+relthresh:    threshhold for correlation coefficients.  Only coefficients
+              greater than relthresh will be printed.
+	      The default value this parameter is 0.05.
+
+------------------------------------------------------------------------------
+Questions?
+See http://www.hsph.harvard.edu/faculty/alkes-price/files/eigensoftfaq.htm
+or email Samuela Pollack, spollack@hsph.harvard.edu
+
+SOFTWARE COPYRIGHT NOTICE AGREEMENT
+This software and its documentation are copyright (2010) by Harvard University
+and The Broad Institute. All rights are reserved. This software is supplied
+without any warranty or guaranteed support whatsoever. Neither Harvard
+University nor The Broad Institute can be responsible for its use, misuse, or
+functionality. The software may be freely copied for non-commercial purposes,
+provided this copyright notice is retained.

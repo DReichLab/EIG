@@ -1,0 +1,61 @@
+This file contains documentation of standard output printed by smartpca.  For
+general documentation of the smartpca program, see README in this directory.
+
+Parameter values: smartpca prints basic info on parameter values used.
+
+Outliers: smartpca prints a list of outlier individuals removed, if any.
+
+Tracy-Widom statistics: the column of interest is the "p-value" column which
+  indicates the statistical significance of each principal component.
+  To get Tracy-Widom statistics, you must recompile smartpca in your 
+  local src/ directory (and move it to bin/), 
+  or just run twstats (see README file in POPGEN directory).
+
+eigbestsnp:  the SNP of maximum weight.  SNP weights are proportional to 
+  the correlation (across samples) between each SNP and each PC.  
+  Equivalently, PC coordinates of a given sample can be computed as the
+  weighted sum of normalized SNP genotypes.
+
+----------------------------------------------------------------------------
+
+POPULATION GENETIC STATISTICS (relevant to studying relationships between
+populations whose labels are explicitly specified in input indiv file) --
+
+Average divergence between populations: smartpca prints a divergence matrix
+  describing divergence between each pair of populations.  Details:
+  From the covariance matrix X  whose eigenvectors were computed
+  we can compute a "distance" d for each pair of individuals (i,j):
+  d(i,j) = X(i,i) + X(j,j) - 2X(i,j)
+  For each pair of populations (a,b)
+  now define
+  D(a,b) = \sum d(i,j) (in pop a, in pop b) / (| popa | * | pop b| )
+  an average distance.  We then normalize D so that the diagonal has
+  mean 1 and publish D.
+  
+Fst statistics: prints fst estimate between each pair of populations, 
+  along with standard error of the estimate.  
+  [If there is only 1 population, no fst statistics are printed.]
+  [If phylipoutname parameter is specified, this information is instead 
+  printed to an output file in PHYLIP format.  See ./README for details.]
+
+Anova statistics for population differences along each eigenvector:
+  For each eigenvector, a P-value for statistical significance of differences
+    between each pair of populations along that eigenvector is printed.
+    +++ is used to highlight P-values less than 1e-06.
+    *** is used to highlight P-values between 1e-06 and 1e-03.
+    If there are more than 2 populations, an overall P-value is also printed
+      for that eigenvector.
+    If there are more than 2 populations, the populations with minimum (minv)
+      and maximum (maxv) eigenvector coordinate are also printed.
+  [If there is only 1 population, no Anova statistics are printed.]
+
+Statistical significance of differences between populations:
+  For each pair of populations, the above Anova statistics are summed
+  across eigenvectors.  The result is approximately chisq with
+  d.o.f. equal to the number of eigenvectors.  The chisq statistic and
+  its p-value are printed.
+  [If there is only 1 population, no statistics are printed.]
+
+-----------------------------------------------------------------------
+
+Questions? nickp@broad.mit.edu

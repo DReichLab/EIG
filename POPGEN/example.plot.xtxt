@@ -1,0 +1,8 @@
+set terminal postscript color
+set title  "" 
+set key outside
+set xlabel  "eigenvector 1" 
+set ylabel  "eigenvector 2" 
+plot  "example.evec.1:2:Case" using 2:3 title "Case" , \
+ "example.evec.1:2:Control" using 2:3 title "Control" 
+## pause 9999

@@ -1,0 +1,251 @@
+See ../README for high-level documentation of the entire EIGENSOFT package.
+
+This file contains documentation of EIGENSTRAT programs:
+  smartpca.perl: run PCA on input genotype data (calls smartpca)
+  smarteigenstrat.perl: run EIGENSTRAT stratification correction.  This program 
+    supports all 5 file formats, and supports quantitative phenotypes.
+  gc.perl: apply Genomic Control (Devlin and Roeder, 1999) to the
+    association statistics computed by EIGENSTRAT.
+    
+We note that the programs eigenstrat and eigenstratQTL of EIGENSOFT version 2.0
+have been replaced by smarteigenstrat.perl.  However, we have retained the old
+programs for backwards compatibility (see below).
+
+See ./example.perl and ./exampleQTL.perl for toy examples using our programs.
+
+Please note that answers to the following questions can be found at
+http://www.hsph.harvard.edu/faculty/alkes-price/files/eigensoftfaq.htm
+-- How do I compute principal components using only a subset of populations
+   and project other populations onto those principal components?
+-- Should regions of long-range LD in the genome be removed prior to PCA?
+-- How do I compute principal components using only a subset of SNPs but
+   then run EIGENSTRAT using the full set of SNPs?
+
+------------------------------------------------------------------------
+
+DOCUMENTATION of smartpca.perl program:
+
+This program calls the smartpca program (see ../POPGEN/README). 
+For this to work, the bin directory containing smartpca MUST be in your path. 
+See ./example.perl for a toy example.
+
+../bin/smartpca.perl
+-i example.geno  : genotype file in any format (see ../CONVERTF/README)
+-a example.snp   : snp file in any format (see ../CONVERTF/README)
+-b example.ind   : indiv file in any format (see ../CONVERTF/README)
+-k k             : (Default is 10) number of principal components to output
+-o example.pca   : output file of principal components.  Individuals removed
+                   as outliers will have all values set to 0.0 in this file.
+-p example.plot  : prefix of output plot files of top 2 principal components.
+                   (labeling individuals according to labels in indiv file)
+-e example.eval  : output file of all eigenvalues
+-l example.log   : output logfile
+-m maxiter       : (Default is 5) maximum number of outlier removal iterations.
+                   To turn off outlier removal, set -m 0.
+-t topk          : (Default is 10) number of principal components along which 
+                   to remove outliers during each outlier removal iteration.
+-s sigma         : (Default is 6.0) number of standard deviations which an
+                   individual must exceed, along one of topk top principal
+		   components, in order to be removed as an outlier.
+
+OPTIONAL FLAGS:
+-w poplist       : compute eigenvectors using populations in poplist only,
+                   where poplist is an ASCII file with one population per line
+-y plotlist      : output plot will include populations in plotlist only, 
+                   where plotlist is an ASCII file with one population per line
+-z badsnpname    : list of SNPs which should be excluded from the analysis
+-q YES/NO        : If set to YES, assume that there is a single population and
+                   the population field contains real-valued phenotypes.
+		   (Corresponds to qtmode parameter in smartpca program.)
+		   The default value for this parameter is NO.
+
+Estimated running time of the smartpca program is 
+  2.5e-12 * nSNP * NSAMPLES^2 hours            if not removing outliers.
+  2.5e-12 * nSNP * NSAMPLES^2 hours * (1+m)    if m outlier removal iterations.
+Thus, under the default of up to 5 outlier removal iterations, running time is 
+  up to 1.5e-11 * nSNP * NSAMPLES^2 hours.
+
+Recommendation: we advise after running pca to check for large correlations
+between each principal component and all variables of interest.  For example,
+large correlations with % missing data (per sample) could imply assay issues
+large correlations with plate membership could imply assay issues
+large correlations with phenotype indicate highly mismatched cases vs. controls
+  which will lead to a loss of power upon applying eigenstrat correction.
+  If input indiv file contains Case and Control labels only, then
+  correlations between each principal component and Case/Control status will be
+  listed at end of output logfile (-l flag).
+
+------------------------------------------------------------------------
+
+DOCUMENTATION of smarteigenstrat.perl program: [run smartpca.perl program first]
+
+This program is a PERL wrapper which calls the C program smarteigenstrat. 
+  Note: the bin directory containing smarteigenstrat MUST be in your path. 
+  See ./example.perl for a toy example.
+We recommend smarteigenstrat.perl for users who prefer command-line flags.
+However, users who prefer parameter files can run smarteigenstrat instead.
+
+../bin/smarteigenstrat.perl
+-i example.geno : genotype file in any format (see ../CONVERTF/README)
+-a example.snp : snp file in any format (see ../CONVERTF/README)
+-b example.ind : individual file in any format (see ../CONVERTF/README).
+  We note that phenotype information will be contained in example.ind,
+  either as Case/Control labels or quantitative phenotypes if -q set to YES.
+-q YES/NO : If set to YES, use quantitative phenotypes in example.ind.
+  If -q is set to YES, the third column of the input individual file
+  in EIGENSTRAT format (or sixth column of input individual file in PED format)
+  should be real numbers.  The value -100.0 signifies "missing data".
+  If -q is set to NO, these values should be "Case" or "Control".
+  The default value for the -q parameter is NO.     
+-p example.pca : input file of principal components (output of smartpca.perl)
+-k 1 : (Default is 10) number of principal components along which to
+  correct for stratification.  Note that l must be less than or equal to
+  the number of principal components reported in the file example.pca.
+-o example.chisq : chisq association statistics.  File contains log of
+  flags to eigenstrat program, followed by one line per SNP:
+  The first entry of each line is Armitage chisq statistic (Armitage, 1955)
+    defined as NSAMPLES x (correlation between genotype and phenotype)^2.
+    If the set of individuals with genotype and phenotype both valid
+    is monomorphic for either genotype or phenotype, then NA is reported.
+  The second entry of each line is the EIGENSTRAT chisq statistic, defined as
+    (NSAMPLES-l-1) x (corr between adjusted_genotype and adjusted_phenotype)^2.
+    If the set of individuals with genotype and phenotype both valid
+    is monomorphic for either genotype or phenotype, then NA is reported.
+  Note: even if l=0, there is a tiny difference between the two statistics
+    because Armitage uses NSAMPLES while we use NSAMPLES-1, which we
+    consider to be appropriate.
+-l example.log : standard output file
+
+The running time of smarteigenstrat.perl is very fast compared to
+  the running time of smartpca.perl.
+
+------------------------------------------------------------------------
+
+DOCUMENTATION of smarteigenstrat program:
+
+Users who prefer parameter files to command-line flags can run the
+C program smarteigenstrat instead of the PERL wrapper smarteigenstrat.perl.
+The syntax of smarteigenstrat is "../bin/smarteigenstrat -p parfile"
+
+DESCRIPTION OF EACH PARAMETER in parameter file for smarteigenstrat:
+
+genotypename:     input genotype file
+snpname:          input snp file
+indivname:        input indiv file
+pcaname:          input pca file 
+outputname:       name of output file of chisq association statistics
+numeigs:          number of principal components to correct for
+qtmode:           YES for quantitative phenotype, NO (default) otherwise 
+
+For details, see documentation of smarteigenstrat.perl above.
+
+OPTIONAL PARAMETERS:
+
+hashcheck:    If set to YES and the input genotype file is in PACKEDANCESTRYMAP 
+  format, check the hash stored inside the file to make sure that individual 
+  and SNP files have not changed since the file was made.  If they have, then 
+  exit in error.  The default value for this parameter is YES.
+
+------------------------------------------------------------------------
+
+DOCUMENTATION of gc.perl: [run smartpca.perl & smarteigenstrat.perl first]
+
+../bin/gc.perl infile outfile
+infile is input file of chisq statistics produced by eigenstrat program.
+  It contains both uncorrected and EIGENSTRAT statistics for each SNP.
+outfile is output file.  It lists
+  lambda inflation values (for both uncorrected and EIGENSTRAT)
+  chisq statistics after scaling by lambda (uncorrected and EIGENSTRAT)
+Computation of lambda is as described in Devlin and Roeder 1999.
+A lambda above 1 indicates inflation in chisq statistics.
+By definition, lambda is not allowed to be less than 1.
+
+Running time of the gc.perl program is very fast.
+
+------------------------------------------------------------------------
+
+STATISTICAL SIGNFICANCE of each principal component: twstats program
+
+See ../POPGEN/README for documentation of twstats program to compute
+Tracy-Widom statistics (statistical significance of each principal component).
+
+------------------------------------------------------------------------
+
+BACKWARDS COMPATIBILITY with EIGENSTRAT version 2.0: eigenstrat program
+
+For backwards compatibility with EIGENSTRAT version 2.0, we have also included
+our old program eigenstrat (for Case/Control phenotypes), as well as 
+our old program eigenstratQTL (for quantitative phenotypes) from that release,
+which have now been replaced by our new program smarteigenstratQTL.perl.  
+See ./example.oldstyle.perl for an example involving the eigenstrat program. 
+
+Most users will want to use our new program smarteigenstrat.perl, which has
+added functionality.  However, users wishing to understand or modify our 
+source code may find it advantageous to instead work with the simpler 
+eigenstrat programs.
+
+------------------------------------------------------------------------
+
+BACKWARDS COMPATIBILITY with 07/23/06 EIGENSTRAT release: pca program
+
+For backwards compatibility with the 07/23/06 EIGENSTRAT release, we have also
+included our old program pca used in that release, which has now been replaced
+by our new program smartpca.perl.  See ./example.oldstyle.perl for an example
+involving the pca program. 
+
+Most users will want to use our new program smartpca.perl, which calls
+the smartpca program and has added functionality.  However, users wishing
+to understand or modify our source code may find it advantageous to instead
+work with the simpler pca program.
+
+------------------------------------------------------------------------
+
+TREATMENT OF X CHROMOSOME
+
+We recommend excluding X chr genotypes when computing principal components, 
+as the different variance for males complicates proper theoretical treatment.  
+Excluding X chr genotypes is the smartpca default (see ../POPGEN/README).
+
+We comment that including or excluding X chromosome genotypes has little effect
+on top principal components in dense genome-scan data sets we have analyzed.
+
+When computing association statistics using the eigenstrat program, the
+default is to include X chr genotypes.  Assuming the usual data convention of
+reporting male X chr genotypes as homozygotes (instead of hemizygotes),
+this corresponds to a model in which male hemizygotes have the same disease
+risk as female homozygotes.  Investigators should consider carefully whether
+this is their desired X chr risk model.  (When correcting for stratification,
+we believe it is reasonable to use principal components inferred using
+autosomal data, as autosomal ancestry and X chr ancestry are likely to be
+very strongly correlated, even if percentages are different in absolute terms).
+
+------------------------------------------------------------------------
+
+RUNNING EIGENSTRAT WITH LESS THAN 100,000 MARKERS
+
+The EIGENSTRAT method is primarily aimed at genome-scan data sets with
+at least 100,000 markers.  If running EIGENSTRAT on much smaller data sets, 
+the inclusion of a candidate marker in the set of markers used to infer
+principal components may lead to a loss in power (Price et al. 2006 Supp Note).
+
+Thus, if running on much smaller data sets, it is necessary to exclude a
+candidate marker from the set of markers used to infer principal components
+used to correct for stratification at the candidate marker.  In the case of
+a data set which uses ancestry-informative markers to infer ancestry, a
+good way to do this is to run smartpca.perl to infer principal components 
+*only* using ancestry-informative markers, excluding the candidate markers 
+(and excluding any ancestry-informative marker in LD with a candidate marker),
+and then run eigenstrat on candidate markers.
+
+------------------------------------------------------------------------
+Questions?
+See http://www.hsph.harvard.edu/faculty/alkes-price/files/eigensoftfaq.htm
+or email Samuela Pollack, spollack@hsph.harvard.edu
+
+SOFTWARE COPYRIGHT NOTICE AGREEMENT
+This software and its documentation are copyright (2010) by Harvard University
+and The Broad Institute. All rights are reserved. This software is supplied
+without any warranty or guaranteed support whatsoever. Neither Harvard
+University nor The Broad Institute can be responsible for its use, misuse, or
+functionality. The software may be freely copied for non-commercial purposes,
+provided this copyright notice is retained.

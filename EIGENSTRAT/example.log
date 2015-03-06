@@ -1,0 +1,8 @@
+parameter file: example.chisq.par
+genotypename: example.geno
+snpname: example.snp
+indivname: example.ind
+pcaname: example.pca
+outputname: example.chisq
+numpc: 1
+qtmode: NO

@@ -1,0 +1,1000 @@
+9,10d8
+< #include <stdint.h>
+< #include <inttypes.h>
+114,129d111
+< #if _WIN32
+< // just in case we try a Windows port in the future
+< #include <windows.h>
+< #include <process.h>
+< #define pthread_t HANDLE
+< #define THREAD_RET_TYPE unsigned __stdcall
+< #define THREAD_RETURN return 0
+< #define MAX_THREADS 63
+< #define MAX_THREADS_P1 64
+< #else
+< #include <pthread.h>
+< #define THREAD_RET_TYPE void*
+< #define THREAD_RETURN return NULL
+< #define MAX_THREADS 127
+< #define MAX_THREADS_P1 128
+< #endif
+217,218d198
+< int thread_ct_config = 0;
+< 
+254,260c234
+<   int nrows, int col, double *xmean, double *xfancy, int *n0, int *n1)  ;
+< int getcolxz_binary1(int* rawcol, double* xcol, SNP* cupt, int* xindex,
+<                      int nrows, int col, double* xmean, double* xfancy,
+<                      int* n0, int* n1);
+< void getcolxz_binary2(int* rawcol, uintptr_t* binary_cols,
+<                       uintptr_t* binary_mmask, uint32_t xblock,
+<                       uint32_t nrows);
+---
+>   int nrows, int col, double *xmean, double *xfancy, int *n0, int *n1)  ;          
+262c236
+< void doinbxx(double *inbans, double *inbsd, SNP **xsnplist, int *xindex, int *xtypes, 
+---
+> double doinbxx(double *inbans, double *inbsd, SNP **xsnplist, int *xindex, int *xtypes, 
+297,298c271
+< void domult_increment_lookup(pthread_t* threads, uint32_t thread_ct, double *XTX_lower_tri, double* tblock, uintptr_t* binary_cols, uintptr_t* binary_mmask, uint32_t block_size, uint32_t indiv_ct, double* partial_sum_lookup_buf);
+< void domult_increment_normal(pthread_t* threads, uint32_t thread_ct, double* XTX_lower_tri, double* tblock, int marker_ct, uint32_t indiv_ct);
+---
+> void domult(double  *tvecs, double  *tblock, int numrow, int len)  ;
+300c273
+< void dofstxx(double *fstans, double *fstsd, SNP **xsnplist, int *xindex, int *xtypes, 
+---
+> double dofstxx(double *fstans, double *fstsd, SNP **xsnplist, int *xindex, int *xtypes, 
+304,373c277
+< void dumpgrm(double *XTX, int *xindex, int nrows, int numsnps, Indiv **indivmarkers, int numindivs, char *grmoutname) ;
+< 
+< uint32_t
+< triangle_divide(int64_t cur_prod, int32_t modif)
+< {
+<   // return smallest integer vv for which (vv * (vv + modif)) is no smaller
+<   // than cur_prod, and neither term in the product is negative.  (Note the
+<   // lack of a divide by two; cur_prod should also be double its "true" value
+<   // as a result.)
+<   int64_t vv;
+<   if (cur_prod == 0) {
+<     if (modif < 0) {
+<       return -modif;
+<     } else {
+<       return 0;
+<     }
+<   }
+<   vv = (int64_t)sqrt((double)cur_prod);
+<   while ((vv - 1) * (vv + modif - 1) >= cur_prod) {
+<     vv--;
+<   }
+<   while (vv * (vv + modif) < cur_prod) {
+<     vv++;
+<   }
+<   return vv;
+< }
+< 
+< void
+< parallel_bounds(uint32_t ct, int32_t start, uint32_t parallel_idx, uint32_t parallel_tot, int32_t* bound_start_ptr, int32_t* bound_end_ptr)
+< {
+<   int32_t modif = 1 - start * 2;
+<   int64_t ct_tot = ((int64_t)ct) * (ct + modif);
+<   *bound_start_ptr = triangle_divide((ct_tot * parallel_idx) / parallel_tot, modif);
+<   *bound_end_ptr = triangle_divide((ct_tot * (parallel_idx + 1)) / parallel_tot, modif);
+< }
+< 
+< // set align to 1 for no alignment
+< void
+< triangle_fill(uint32_t* target_arr, uint32_t ct, uint32_t pieces, uint32_t parallel_idx, uint32_t parallel_tot, uint32_t start, uint32_t align)
+< {
+<   int32_t modif = 1 - start * 2;
+<   uint32_t cur_piece = 1;
+<   int64_t ct_tr;
+<   int64_t cur_prod;
+<   int32_t lbound;
+<   int32_t ubound;
+<   uint32_t uii;
+<   uint32_t align_m1;
+<   parallel_bounds(ct, start, parallel_idx, parallel_tot, &lbound, &ubound);
+<   // x(x+1)/2 is divisible by y iff (x % (2y)) is 0 or (2y - 1).
+<   align *= 2;
+<   align_m1 = align - 1;
+<   target_arr[0] = lbound;
+<   target_arr[pieces] = ubound;
+<   cur_prod = ((int64_t)lbound) * (lbound + modif);
+<   ct_tr = (((int64_t)ubound) * (ubound + modif) - cur_prod) / pieces;
+<   while (cur_piece < pieces) {
+<     cur_prod += ct_tr;
+<     lbound = triangle_divide(cur_prod, modif);
+<     uii = (lbound - ((int32_t)start)) & align_m1;
+<     if ((uii) && (uii != align_m1)) {
+<       lbound = start + ((lbound - ((int32_t)start)) | align_m1);
+<     }
+<     // lack of this check caused a nasty bug earlier
+<     if (((uint32_t)lbound) > ct) {
+<       lbound = ct;
+<     }
+<     target_arr[cur_piece++] = lbound;
+<   }
+< }
+---
+> void dumpgrm(double *XTX, int *xindex, int nrows, int numsnps, Indiv **indivmarkers, int numindivs, char *grmoutname)  ;
+375,428d278
+< void
+< symit2(double* XTX, uintptr_t nrows)
+< {
+<   // unpacks LOWER-triangle-only symmetric matrix representation into regular
+<   // square matrix.
+<   uintptr_t row_idx;
+<   uintptr_t col_idx;
+<   double* read_col;
+<   double* write_ptr;
+<   if (nrows < 3) {
+<     if (nrows < 2) {
+<       return;
+<     }
+<     // special case, need to avoid overlapping memcpy
+<     XTX[3] = XTX[2];
+<     XTX[2] = XTX[1];
+<     return;
+<   }
+<   for (row_idx = nrows - 1; row_idx; row_idx--) {
+<     memcpy(&(XTX[row_idx * nrows]), &(XTX[(row_idx * (row_idx + 1)) / 2]), (row_idx + 1) * sizeof(double));
+<   }
+<   for (row_idx = 0; row_idx < nrows; row_idx++) {
+<     read_col = &(XTX[row_idx]);
+<     write_ptr = &(XTX[row_idx * nrows + row_idx + 1]);
+<     for (col_idx = row_idx + 1; col_idx < nrows; col_idx++) {
+<       *write_ptr++ = read_col[col_idx * nrows];
+<     }
+<   }
+< }
+< 
+< void
+< copy_transposed(double* orig_matrix, uintptr_t orig_row_ct, uintptr_t orig_col_ct, double* transposed_matrix)
+< {
+<   uintptr_t new_row_idx;
+<   uintptr_t new_col_idx;
+<   double* orig_col_ptr;
+<   for (new_row_idx = 0; new_row_idx < orig_col_ct; new_row_idx++) {
+<     orig_col_ptr = &(orig_matrix[new_row_idx]);
+<     for (new_col_idx = 0; new_col_idx < orig_row_ct; new_col_idx++) {
+<       *transposed_matrix++ = orig_col_ptr[new_col_idx * orig_col_ct];
+<     }
+<   }
+< }
+< 
+< // make these file scope so multithreading works
+< static double* g_XTX_lower_tri;
+< static double* g_tblock;
+< static uint32_t g_block_size;
+< static uintptr_t g_indiv_ct;
+< static uint32_t g_thread_start[MAX_THREADS_P1];
+< 
+< static double* g_weights;
+< static uintptr_t* g_binary_cols;
+< static uintptr_t* g_binary_mmask;
+433a284,286
+>   int **snppos ;
+>   int *snpindx ;
+>   char **snpnamelist, **indnamelist ;
+435c288
+<   int numeg ;
+---
+>   int  lsnplist, lindlist, numeg ;
+438c291
+<   SNP *cupt ;
+---
+>   SNP *cupt, *cupt1, *cupt2, *cupt3 ;
+440c293,294
+<   double y1 = 0, y2, y2l, y, y3 ;
+---
+>   double y1, y2, y2l, y, y3 ;
+>   FILE *twxtestfp;
+442c296,298
+<   int n0, n1, nkill ;
+---
+>   int ch1, ch2 ;
+>   int fmnum , lmnum ;
+>   int num, n0, n1, nkill ;
+444c300,301
+<   int nindiv = 0 ;
+---
+>   int nindiv = 0, e, f, lag=1  ;
+>   double xc[9], xd[4], xc2[9] ;
+452,453c309
+<   double *XTX, *cc, *evecs, *ww ; 
+<   double* partial_sum_lookup_buf = NULL;
+---
+>   double *XTX, *cc, *evecs, *ww, weight, *qvec, *qcoord ; 
+454a311
+>   double *tvecs ;
+459,460c316,317
+<   double ynrows ;
+<   int t, tt ;  
+---
+>   double chisq, ynrows ;
+>   int *numhits, t, g, tt ;  
+462,463c319,320
+<   double *ldvv = NULL , ynumsnps = 0 ; // for grm
+<   int *ldsnpbuff = NULL ;
+---
+>   double *ldvv, ynumsnps ; // for grm
+>   int *ldsnpbuff ;
+468c325,326
+<   int chrom ;
+---
+>   int chrom,  numclear ;
+>   double gdis ;
+469a328
+>   int a, b, kmax, kmin ;
+470a330
+>   double **eigmoment, **eigindmoment ;
+471a332
+>   double *snpsc ; 
+475c336
+<   double *trow = NULL, *rhs = NULL, *emat = NULL, *regans = NULL ;
+---
+>   double *trow, *rhs, *emat, *regans ;
+480,485c341,342
+<   int xblock ;
+<   int blocksize = 1024;
+<   double *tblock = NULL;
+<   int* binary_rawcol = NULL;
+<   uintptr_t* binary_cols = NULL;
+<   uintptr_t* binary_mmask = NULL;
+---
+>   int xblock, blocksize=10000 ;   
+>   double *tblock ;  
+489,491d345
+<   pthread_t threads[MAX_THREADS];
+<   uint32_t thread_ct;
+< 
+694,714c548,550
+<   ZALLOC(XTX, nrows*nrows, double) ;
+<   ZALLOC(evecs, nrows*nrows, double) ;
+<   if ((!usepopsformissing) && (ldregress == 0)) {
+<     // should not use lookup table if
+<     // - usepopsformissing is set (since each population may have a different
+<     //   mean), or
+<     // - ldregress > 0
+< #ifdef __LP64__
+<     blocksize = 20;
+<     ZALLOC(partial_sum_lookup_buf, 131072, double);
+< #else
+<     blocksize = 10;
+<     ZALLOC(partial_sum_lookup_buf, 65536, double);
+< #endif
+<     ZALLOC(binary_rawcol, nrows, int);
+<     ZALLOC(binary_cols, nrows, uintptr_t);
+<     ZALLOC(binary_mmask, nrows, uintptr_t);
+<     ZALLOC(tblock, 3 * blocksize, double);
+<   } else {
+<     ZALLOC(tblock, nrows*blocksize, double) ;
+<   }
+---
+>    ZALLOC(XTX, nrows*nrows, double) ;
+>    ZALLOC(evecs, nrows*nrows, double) ;
+>    ZALLOC(tvecs, nrows*nrows, double) ;
+718c554
+<   ZALLOC(cc, (nrows > 3)? nrows : 3, double) ;
+---
+>   ZALLOC(cc, nrows, double) ;
+722a559
+>   ZALLOC(tblock, nrows*blocksize, double) ;
+742,779d578
+<   // try to autodetect number of (virtual) processors, and use that number to
+<   // set the thread count.  allow the user to override this in the future
+< #if _WIN32
+<   SYSTEM_INFO sysinfo;
+<   if (thread_ct_config <= 0) {
+<     GetSystemInfo(&sysinfo);
+<     thread_ct = sysinfo.dwNumberOfProcessors;
+<   } else {
+<     thread_ct = thread_ct_config;
+<   }
+< #else
+<   if (thread_ct_config <= 0) {
+<     i = sysconf(_SC_NPROCESSORS_ONLN);
+<     if (i == -1) {
+<       thread_ct = 1;
+<     } else {
+<       thread_ct = i;
+<     }
+<   } else {
+<     thread_ct = thread_ct_config;
+<   }
+< #endif
+<   if (thread_ct > 8) {
+<     if (thread_ct > MAX_THREADS) {
+<       thread_ct = MAX_THREADS;
+<     } else {
+<       thread_ct--;
+<     }
+<   }
+<   if (thread_ct > nrows * 2) {
+<     thread_ct = nrows / 2;
+<     if (!thread_ct) {
+<       thread_ct = 1;
+<     }
+<   }
+<   printf("Using %u thread%s%s.\n", thread_ct, (thread_ct == 1)? "" : "s", (partial_sum_lookup_buf)? ", and partial sum lookup algorithm" : "");
+<   triangle_fill(g_thread_start, nrows, thread_ct, 0, 1, 0, 1);
+< 
+793c592,593
+<     vzero(XTX, (nrows*(nrows+1)) / 2) ;
+---
+>     vzero(XTX, nrows*nrows) ;
+>     vzero(tblock, nrows*blocksize) ;
+805a606
+> 
+808,819c609
+<     ynumsnps = 0 ;
+<     if (partial_sum_lookup_buf) {
+<       for (i = 0; i < nrows; i++) {
+< 	binary_cols[i] = 0;
+<       }
+<       for (i = 0; i < nrows; i++) {
+< 	binary_mmask[i] = 0;
+<       }
+<       vzero(tblock, 3 * blocksize);
+<     } else {
+<       vzero(tblock, nrows*blocksize) ;
+<     }
+---
+>     ynumsnps = 0 ; ;
+823,827c613
+<       if (!partial_sum_lookup_buf) {
+<         tt = getcolxz(cc, cupt, xindex, xtypes, nrows, i, xmean, xfancy, &n0, &n1) ;
+<       } else {
+<         tt = getcolxz_binary1(binary_rawcol, cc, cupt, xindex, nrows, i, xmean, xfancy, &n0, &n1);
+<       }
+---
+>       tt = getcolxz(cc, cupt, xindex, xtypes, nrows, i, xmean, xfancy, &n0, &n1) ;
+832,839c618,631
+< 	t =  MAX(t, 0) ;
+< 	tt = MAX(tt, 0) ;
+< 	cupt -> ignore = YES ;
+< 	logdeletedsnp(cupt->ID,"minallelecnt",deletesnpoutname);
+< 	vzero(cc, nrows) ; 
+< 	if (nkill < 10) printf(" snp %20s ignored . allelecnt: %5d  missing: %5d\n", cupt -> ID, t, tt) ;
+< 	++nkill ;
+< 	continue ;
+---
+>        t =  MAX(t, 0) ;
+>        tt = MAX(tt, 0) ;
+>        cupt -> ignore = YES ;
+>        logdeletedsnp(cupt->ID,"minallelecnt",deletesnpoutname);
+>        vzero(cc, nrows) ; 
+>        if (nkill < 10) printf(" snp %20s ignored . allelecnt: %5d  missing: %5d\n", cupt -> ID, t, tt) ;
+>        ++nkill ;
+>        continue ;
+>       }
+> 
+>      if (weightmode) 
+>       {
+>         weight = xsnplist[i] -> weight ;
+>         vst(cc, cc, xsnplist[i] -> weight, nrows) ;
+844,875c636,650
+<       if (!partial_sum_lookup_buf) {
+< 	if (weightmode)
+< 	{
+< 	  vst(cc, cc, xsnplist[i] -> weight, nrows) ;
+< 	}
+< 
+< 
+< 	if (ldregress>0) 
+< 	{  
+< 
+< 	  t = ldregx(ldvv, cc, ww, numld, nrows, ldr2lo, ldr2hi) ; 
+< 	  if (t<2) {
+< 	    bumpldvv(ldvv, cc, &numld, ldregress, nrows, ldsnpbuff, i) ; 
+< 	    lastldchrom = chrom ;
+< 	    ynumsnps += asum2(ww, nrows)/ asum2(cc, nrows) ; 
+<   // don't need to think hard about how cc is normalizes
+< 	  } else {
+< 	    // Ignore this SNP and exclude from further regressions (*ww is returned as all zeroes)
+< 	    bumpldvv(ldvv, ww, &numld, ldregress, nrows, ldsnpbuff, i) ; 
+< 	    lastldchrom = chrom ;
+< 	  }
+< 	  copyarr(ww, cc, nrows) ;
+< 	}
+< 	else ++ynumsnps ;
+<         copyarr(cc, tblock+xblock*nrows, nrows) ;
+<       } else {
+< 	getcolxz_binary2(binary_rawcol, binary_cols, binary_mmask, xblock, nrows);
+< 	if (weightmode) {
+< 	  vst(cc, cc, xsnplist[i]->weight, 3);
+< 	}
+< 	++ynumsnps;
+< 	copyarr(cc, &(tblock[xblock * 3]), 3);
+---
+>       if (ldregress>0) 
+> 
+>       {  
+>         t = ldregx(ldvv, cc, ww, numld, nrows, ldr2lo, ldr2hi) ; 
+>         if (t<2) {
+>           bumpldvv(ldvv, cc, &numld, ldregress, nrows, ldsnpbuff, i) ; 
+>           lastldchrom = chrom ;
+>           ynumsnps += asum2(ww, nrows)/ asum2(cc, nrows) ; 
+> // don't need to think hard about how cc is normalizes
+>         } else {
+>           // Ignore this SNP and exclude from further regressions (*ww is returned as all zeroes)
+>           bumpldvv(ldvv, ww, &numld, ldregress, nrows, ldsnpbuff, i) ; 
+>           lastldchrom = chrom ;
+>         }
+>         copyarr(ww, cc, nrows) ;
+876a652
+>       else ++ynumsnps ;
+877a654
+>       copyarr(cc, tblock+xblock*nrows, nrows) ;
+883,896c660,662
+<       {
+< 	if (partial_sum_lookup_buf) {
+< 	  domult_increment_lookup(threads, thread_ct, XTX, tblock, binary_cols, binary_mmask, xblock, nrows, partial_sum_lookup_buf);
+< 	  for (j = 0; j < nrows; j++) {
+< 	    binary_cols[j] = 0;
+< 	  }
+< 	  for (j = 0; j < nrows; j++) {
+< 	    binary_mmask[j] = 0;
+< 	  }
+< 	  vzero(tblock, 3 * blocksize);
+< 	} else {
+<           domult_increment_normal(threads, thread_ct, XTX, tblock, xblock, nrows);
+<           vzero(tblock, nrows*blocksize) ;
+< 	}
+---
+>       {  
+>         domult(tvecs, tblock, xblock, nrows) ;
+>         vvp(XTX, XTX, tvecs, nrows*nrows) ;
+897a664
+>         vzero(tblock, nrows*blocksize) ;
+902,907c669,671
+<     {
+<       if (partial_sum_lookup_buf) {
+< 	domult_increment_lookup(threads, thread_ct, XTX, tblock, binary_cols, binary_mmask, xblock, nrows, partial_sum_lookup_buf);
+<       } else {
+<         domult_increment_normal(threads, thread_ct, XTX, tblock, xblock, nrows);
+<       }
+---
+>     { 
+>      domult(tvecs, tblock, xblock, nrows) ;
+>      vvp(XTX, XTX, tvecs, nrows*nrows) ;
+909c673
+<     symit2(XTX, nrows) ;
+---
+>     symit(XTX, nrows) ;
+945,946c709
+<   dumpgrm(XTX, xindex, nrows,  ynumsnps, indivmarkers, numindivs, grmoutname) ;
+<   printf("grm dumped\n");
+---
+>   dumpgrm(XTX, xindex, nrows,  ynumsnps, indivmarkers, numindivs, grmoutname) ; 
+995a759
+> 
+1037a802
+> 
+1094a860,862
+>   eigmoment    = initarray_2Ddouble(numeigs, 5, 0.0) ;
+>   eigindmoment = initarray_2Ddouble(numeigs, 5, 0.0) ;
+> 
+1130,1136c898
+<   if (partial_sum_lookup_buf) {
+<     free(partial_sum_lookup_buf);
+<     free(binary_rawcol);
+<     free(binary_cols);
+<     free(binary_mmask);
+<   }
+<   free(tblock);
+---
+>   free(tvecs) ;
+1244,1246d1005
+<   for (i = 0; i < numeg; i++) {
+<     xpopsize[i] = 0;
+<   }
+1408c1167
+<   int i ;
+---
+>   int i,haploid=0;
+1410c1169,1171
+<   int t ;
+---
+>   char str[5000]  ;
+>   char *tempname ;
+>   int n, t ;
+1545,1546d1305
+<    getint(ph, "numthreads:", &thread_ct_config) ;
+< 
+1590,1621d1348
+< int fvadjust_binary(int c0, int c1, int nmiss, int n, double* cc, double* pmean, double* fancy)
+< {
+<   double p, ynum, ysum, y, ymean, yfancy = 1.0;
+< 
+<   if (n == nmiss) {
+<     return -999;
+<   }
+<   ynum = n - nmiss;
+<   ysum = c0;
+<   ymean = ysum / ynum;
+<   cc[0] = -ymean;
+<   cc[1] = 1.0 - ymean;
+<   cc[2] = 2.0 - ymean;
+<   if (fancynorm) {  
+<     p = 0.5*ymean;
+<     if (altnormstyle == NO) {
+<       p = (ysum+1.0)/(2.0*ynum+2.0);
+<     }
+<     y = p * (1.0-p);
+<     if (y>0.0) {
+<       yfancy = 1.0/sqrt(y);
+<     }
+<   }
+<   if (pmean) {
+<     *pmean = ymean;
+<   }
+<   if (fancy) {
+<     *fancy = yfancy;
+<   }
+<   return nmiss;
+< }
+< 
+1629,1630c1356,1357
+<    int i, k1, k2, k, n, x1, x2 ;
+<    double ylike ;
+---
+>    int i, k1, k2, k, j, n, x1, x2 ;
+>    double y1, y2, ylike, yl0, yl1, yl2 ;
+1638c1365,1366
+<    double ans, ftail, ftailx, ansx ; 
+---
+>    char sshit[4] ;
+>    double tail, ans, ftail, ftailx, ansx ; 
+1725c1453
+<    double y1, top, bot, ftail ;  
+---
+>    double y1, y2, ylike, top, bot, ftail ;  
+1843c1571
+<        printf("%40s %6d %9.3f",ss2, df, chi) ;
+---
+>        printf("%40s %6d %9.3f",ss2, ss2, df, chi) ;
+2094c1822
+< void dofstxx(double *fstans, double *fstsd, SNP **xsnplist, int *xindex, int *xtypes, 
+---
+> double dofstxx(double *fstans, double *fstsd, SNP **xsnplist, int *xindex, int *xtypes, 
+2098a1827
+>    int t1, t2 ;
+2099a1829
+>    double y, sd ; 
+2386a2117
+>  Indiv *indx  ;
+2388c2119
+<  double y, pmean, yfancy ;
+---
+>  double y, pmean, p, yfancy ;
+2389a2121
+>  int **ccc ;
+2391,2392c2123
+<  double* popnum = NULL;
+<  double* popsum = NULL;
+---
+>  double *popnum, *popsum ;
+2403a2135
+>   t = 0 ;
+2417a2150
+>     ++t ;
+2448c2181
+<    return -1;
+---
+>    return ;
+2466,2550c2199
+< 
+< int
+< getcolxz_binary1(int* rawcol, double* xcol, SNP* cupt, int* xindex, int nrows,
+<                  int col, double* xmean, double* xfancy, int* n0, int* n1)
+< {
+<   // Modified getcolxz() which converts to a 3-bit-per-genotype representation
+<   // compatible with PLINK 1.5's partial sum lookup outer product algorithm.
+<   // (Well, to be more precise, the conversion occurs in getcolxz_binary2();
+<   // this function handles the other duties of getcolxz().)  Assumes
+<   // usepopsformissing is NOT set, and ldregress is zero.
+<   //
+<   // Main genotype array:
+<   //   Homozygous minor -> 0
+<   //   Heterozygous     -> 2
+<   //   Homozygous major -> 3
+<   //   Missing          -> 0
+<   //
+<   // Missing mask:
+<   //   Nonmissing       -> 0
+<   //   Missing          -> 7
+<   //
+<   // Suppose person 1 has genotype g_1 and missing mask m_1, and person 2 has
+<   // genotype g_2 and missing mask m_2.  Then, the operation
+<   //
+<   //   (g_1 + g_2) | m_1 | m_2
+<   //
+<   // executes the following mapping:
+<   //
+<   //   Both genotypes hom minor -> 0
+<   //   Hom minor + het          -> 2
+<   //   Hom minor + hom major    -> 3
+<   //   Het + het                -> 4
+<   //   Het + hom major          -> 5
+<   //   Hom major + hom major    -> 6
+<   //   Either genotype missing  -> 7
+<   //
+<   // Construction of the corresponding lookup table is deferred to
+<   // domult_increment_lookup().
+< 
+<   int j, n, g, t;
+<   double pmean, yfancy;
+<   int c0, c1, nmiss;
+< 
+<   c0 = c1 = 0;
+<   n = cupt->ngtypes;
+<   if (n < nrows) {
+<     fatalx("bad snp: %s %d\n", cupt->ID, n);
+<   }
+<   getrawcol(rawcol, cupt, xindex, nrows);
+<   nmiss = 0;
+<   for (j=0; j<nrows; ++j) { 
+<     g = rawcol[j];  
+<     if (g<0) {
+<       ++nmiss; 
+<       continue;  
+<     }
+<     c0 += g;
+<     c1 += 2-g;
+<   }
+<   // instead of storing an entire column of floating point values,
+<   t = fvadjust_binary(c0, c1, nmiss, nrows, xcol, &pmean, &yfancy);
+<   if (t < -99) {
+<     if (xmean != NULL) {
+<       xmean[col] = 0.0; 
+<       xfancy[col] = 0.0;
+<     }
+<     vzero(xcol, 3);
+<     if (n0 != NULL) {
+<       *n0 = -1; 
+<       *n1 = -1;
+<     }
+<     return -1;
+<   }
+<   vst(xcol, xcol, yfancy, 3);
+<   if (xmean != NULL) {
+<     xmean[col] = pmean*yfancy; 
+<     xfancy[col] = yfancy;
+<   }
+<   if (n0 != NULL) {
+<     *n0 = c0 ; 
+<     *n1 = c1 ;
+<   }
+<   return nmiss ;
+< }
+< 
+---
+> /** this is the code to parallelize */
+2552,2553c2201
+< getcolxz_binary2(int* rawcol, uintptr_t* binary_cols, uintptr_t* binary_mmask,
+<                  uint32_t xblock, uint32_t nrows)
+---
+> domult(double  *tvecs, double  *tblock, int numrow, int len) 
+2555,2764c2203,2209
+<   // slightly better to position at 0-3-6-9-12-16-19... instead of
+<   // 0-3-6-9-12-15-18...
+<   uint32_t shift_val = (xblock * 3) + (xblock / 5);
+< 
+<   uintptr_t bitfield_or[3];
+<   uint32_t row_idx;
+<   int cur_geno;
+<   bitfield_or[0] = ((uintptr_t)7) << shift_val;
+<   bitfield_or[1] = ((uintptr_t)2) << shift_val;
+<   bitfield_or[2] = ((uintptr_t)3) << shift_val;
+<   for (row_idx = 0; row_idx < nrows; row_idx++) {
+<     cur_geno = *rawcol++;
+<     if (cur_geno) {
+<       if (cur_geno > 0) {
+<         binary_cols[row_idx] |= bitfield_or[(uint32_t)cur_geno];
+<       } else {
+<         binary_mmask[row_idx] |= bitfield_or[0];
+<       }
+<     }
+<   }
+< }
+< 
+< void
+< join_threads(pthread_t* threads, uint32_t ctp1)
+< {
+<   if (!(--ctp1)) {
+<     return;
+<   }
+< #if _WIN32
+<   WaitForMultipleObjects(ctp1, threads, 1, INFINITE);
+< #else
+<   uint32_t uii;
+<   for (uii = 0; uii < ctp1; uii++) {
+<     pthread_join(threads[uii], NULL);
+<   }
+< #endif
+< }
+< 
+< #if _WIN32
+< int32_t
+< spawn_threads(pthread_t* threads, unsigned (__stdcall *start_routine)(void*), uintptr_t ct)
+< #else
+< int32_t
+< spawn_threads(pthread_t* threads, void* (*start_routine)(void*), uintptr_t ct)
+< #endif
+< {
+<   uintptr_t ulii;
+<   if (ct == 1) {
+<     return 0;
+<   }
+<   for (ulii = 1; ulii < ct; ulii++) {
+< #if _WIN32
+<     threads[ulii - 1] = (HANDLE)_beginthreadex(NULL, 4096, start_routine, (void*)ulii, 0, NULL);
+<     if (!threads[ulii - 1]) {
+<       join_threads(threads, ulii);
+<       return -1;
+<     }
+< #else
+<     if (pthread_create(&(threads[ulii - 1]), NULL, start_routine, (void*)ulii)) {
+<       join_threads(threads, ulii);
+<       return -1;
+<     }
+< #endif
+<   }
+<   return 0;
+< }
+< 
+< THREAD_RET_TYPE block_increment_binary(void* arg) {
+<   uintptr_t tidx = (uintptr_t)arg;
+<   uintptr_t cur_indiv_idx = g_thread_start[tidx];
+<   uintptr_t end_indiv_idx = g_thread_start[tidx + 1];
+<   uintptr_t* binary_cols = g_binary_cols;
+<   uintptr_t* binary_mmask = g_binary_mmask;
+<   double* write_ptr = &(g_XTX_lower_tri[(cur_indiv_idx * (cur_indiv_idx + 1)) / 2]);
+<   double* weights0 = g_weights;
+<   double* weights1 = &(g_weights[32768]);
+< #ifdef __LP64__
+<   double* weights2 = &(g_weights[65536]);
+<   double* weights3 = &(g_weights[98304]);
+< #endif
+<   uintptr_t* geno_ptr;
+<   uintptr_t* mmask_ptr;
+<   uintptr_t base_geno;
+<   uintptr_t base_mmask;
+<   uintptr_t final_geno;
+<   uintptr_t indiv_idx2;
+<   for (; cur_indiv_idx < end_indiv_idx; cur_indiv_idx++) {
+<     geno_ptr = binary_cols;
+<     base_geno = binary_cols[cur_indiv_idx];
+<     mmask_ptr = binary_mmask;
+<     base_mmask = binary_mmask[cur_indiv_idx];
+<     if (!base_mmask) {
+<       // special case: current individual has no missing genotypes in block
+<       for (indiv_idx2 = 0; indiv_idx2 <= cur_indiv_idx; indiv_idx2++) {
+< 	final_geno = ((*geno_ptr++) + base_geno) | (*mmask_ptr++);
+< #ifdef __LP64__
+< 	*write_ptr += weights0[(uint16_t)final_geno] + weights1[(uint16_t)(final_geno >> 16)] + weights2[(uint16_t)(final_geno >> 32)] + weights3[final_geno >> 48];
+< #else
+<         *write_ptr += weights0[(uint16_t)final_geno] + weights1[final_geno >> 16];
+< #endif
+<         write_ptr++;
+<       }
+<     } else {
+<       for (indiv_idx2 = 0; indiv_idx2 <= cur_indiv_idx; indiv_idx2++) {
+< 	final_geno = ((*geno_ptr++) + base_geno) | ((*mmask_ptr++) | base_mmask);
+< #ifdef __LP64__
+< 	*write_ptr += weights0[(uint16_t)final_geno] + weights1[(uint16_t)(final_geno >> 16)] + weights2[(uint16_t)(final_geno >> 32)] + weights3[final_geno >> 48];
+< #else
+<         *write_ptr += weights0[(uint16_t)final_geno] + weights1[final_geno >> 16];
+< #endif
+< 	write_ptr++;
+<       }
+<     }
+<   }
+<   THREAD_RETURN;
+< }
+< 
+< void
+< domult_increment_lookup(pthread_t* threads, uint32_t thread_ct, double *XTX_lower_tri, double* tblock, uintptr_t* binary_cols, uintptr_t* binary_mmask, uint32_t block_size, uint32_t indiv_ct, double* partial_sum_lookup_buf)
+< {
+<   // PLINK 1.5 partial sum lookup algorithm
+<   double increments[40];
+<   double* dptr;
+<   double* dptr2;
+<   uint32_t uii;
+<   uint32_t ujj;
+<   uint32_t ukk;
+<   uint32_t umm;
+<   uint32_t unn;
+<   uint32_t uoo;
+<   double partial_incr1;
+<   double partial_incr2;
+<   double partial_incr3;
+<   double partial_incr4;
+<   uintptr_t ulii;
+< 
+<   // populate lookup buffer
+< #ifdef __LP64__
+<   for (uii = 0; uii < 20; uii += 5)
+< #else
+<   for (uii = 0; uii < 10; uii += 5)
+< #endif
+<   {
+<     dptr = increments;
+<     for (ujj = 0; ujj < 5; ujj++) {
+<       dptr2 = &(tblock[(uii + ujj) * 3]);
+<       *dptr++ = dptr2[0] * dptr2[0];
+<       *dptr++ = 0;
+<       *dptr++ = dptr2[0] * dptr2[1];
+<       *dptr++ = dptr2[0] * dptr2[2];
+<       *dptr++ = dptr2[1] * dptr2[1];
+<       *dptr++ = dptr2[1] * dptr2[2];
+<       *dptr++ = dptr2[2] * dptr2[2];
+<       *dptr++ = 0;
+<     }
+<     dptr = &(partial_sum_lookup_buf[(uii / 5) * 32768]);
+<     for (ujj = 0; ujj < 8; ujj++) {
+<       partial_incr1 = increments[ujj + 32];
+<       for (ukk = 0; ukk < 8; ukk++) {
+< 	partial_incr2 = partial_incr1 + increments[ukk + 24];
+< 	for (umm = 0; umm < 8; umm++) {
+< 	  partial_incr3 = partial_incr2 + increments[umm + 16];
+< 	  for (unn = 0; unn < 8; unn++) {
+< 	    partial_incr4 = partial_incr3 + increments[unn + 8];
+< 	    for (uoo = 0; uoo < 8; uoo++) {
+< 	      *dptr++ = partial_incr4 + increments[uoo];
+< 	    }
+< 	  }
+< 	}
+<       }
+<     }
+<   }
+<   g_XTX_lower_tri = XTX_lower_tri;
+<   g_weights = partial_sum_lookup_buf;
+<   g_binary_cols = binary_cols;
+<   g_binary_mmask = binary_mmask;
+<   if (spawn_threads(threads, block_increment_binary, thread_ct)) {
+<     fatalx("Error: Failed to create thread.\n");
+<     return;
+<   }
+<   ulii = 0;
+<   block_increment_binary((void*)ulii);
+<   join_threads(threads, thread_ct);
+< }
+< 
+< THREAD_RET_TYPE block_increment_normal(void* arg) {
+<   uintptr_t tidx = (uintptr_t)arg;
+<   uintptr_t start_indiv_idx = g_thread_start[tidx];
+<   uintptr_t end_indiv_idx = g_thread_start[tidx + 1];
+<   uintptr_t indiv_ct = g_indiv_ct;
+<   uint32_t block_size = g_block_size;
+<   double* write_start_ptr = &(g_XTX_lower_tri[(start_indiv_idx * (start_indiv_idx + 1)) / 2]);
+<   double* write_ptr;
+<   double* tblock;
+<   double* tblock_read_ptr;
+<   double cur_tblock_val;
+<   uintptr_t cur_indiv_idx;
+<   uintptr_t indiv_idx2;
+<   uint32_t bidx;
+<   for (bidx = 0; bidx < block_size; bidx++) {
+<     write_ptr = write_start_ptr;
+<     tblock = &(g_tblock[bidx * indiv_ct]);
+<     for (cur_indiv_idx = start_indiv_idx; cur_indiv_idx < end_indiv_idx; cur_indiv_idx++) {
+<       cur_tblock_val = tblock[cur_indiv_idx];
+<       tblock_read_ptr = tblock;
+<       for (indiv_idx2 = 0; indiv_idx2 <= cur_indiv_idx; indiv_idx2++) {
+< 	*write_ptr += cur_tblock_val * (*tblock_read_ptr++);
+< 	write_ptr++;
+<       }
+<     }
+---
+>   int i ;
+>   double ycheck ;
+>   vzero(tvecs, len*len) ;
+>   for (i=0; i<numrow; i++) {  
+>     ycheck = asum(tblock+i*len, len) ;  
+>     if (fabs(ycheck)>.00001) fatalx("bad ycheck\n") ;
+>     addoutersym(tvecs, tblock+i*len, len) ;
+2766d2210
+<   THREAD_RETURN;
+2768,2798d2211
+< 
+< void
+< domult_increment_normal(pthread_t* threads, uint32_t thread_ct, double* XTX_lower_tri, double* tblock, int block_size, uint32_t indiv_ct)
+< {
+<   // General case: tblock[] can have an arbitrary number of distinct values, so
+<   // can't use bit hacks.
+<   //
+<   // This multithreaded implementation is pretty far from optimal; if more
+<   // speed is needed, use the DGEMM function from a vendor-optimized BLAS.
+<   // (Sum of k outer products is just equal to the product of a n*k and a k*n
+<   // matrix.)
+<   int ii;
+<   double ycheck;
+<   uintptr_t ulii;
+<   for (ii=0; ii<block_size; ii++) {  
+<     ycheck = asum(tblock+ii*indiv_ct, indiv_ct) ;
+<     if (fabs(ycheck)>.00001) fatalx("bad ycheck\n");
+<   }
+<   g_XTX_lower_tri = XTX_lower_tri;
+<   g_tblock = tblock;
+<   g_block_size = block_size;
+<   g_indiv_ct = indiv_ct;
+<   if (spawn_threads(threads, block_increment_normal, thread_ct)) {
+<     fatalx("Error: Failed to create thread.\n");
+<     return;
+<   }
+<   ulii = 0;
+<   block_increment_normal((void*)ulii);
+<   join_threads(threads, thread_ct);
+< }
+< 
+2804,2805c2217,2219
+<  int n ;
+<  double pmean, yfancy ;
+---
+>  Indiv *indx  ;
+>  int  j,  n, g, t ;
+>  double y, pmean, p, yfancy ;
+2832c2246
+< void doinbxx(double *inbans, double *inbsd, SNP **xsnplist, int *xindex, int *xtypes, 
+---
+> double doinbxx(double *inbans, double *inbsd, SNP **xsnplist, int *xindex, int *xtypes, 
+2835a2250
+>    int t1, t2 ;
+2836a2252
+>    double y, sd ; 
+2898c2314
+<    // Indiv *indx ;
+---
+>    Indiv *indx ;
+2906c2322
+<     // indx = indivmarkers[i] ; 
+---
+>     indx = indivmarkers[i] ; 
+2930c2346
+< dumpgrmbin(double *XTX, int nrows, int numsnps, Indiv **indivmarkers, int numindivs, char *grmoutname)  
+---
+> dumpgrmbin(double *XTX, int *xindex, int nrows, int numsnps, Indiv **indivmarkers, int numindivs, char *grmoutname)  
+2932c2348
+<   int a, b;
+---
+>   int a, b, s, xa, xb, maxs ;
+2933a2350
+>   FILE *fff ;
+2936c2353
+<   int wout, numout, fdes, ret = 0 ;
+---
+>   int wout, numout, fdes, ret ;
+2984c2401,2403
+<     y = XTX[a*nrows+b] / y_norm; // bugfix
+---
+>     xa = xindex[a] ;
+>     xb = xindex[b] ;
+>     y = XTX[xa*nrows+xb] / y_norm;
+2994c2413
+<   int a, b;
+---
+>   int a, b, s, xa, xb, maxs ;
+3005c2424
+<    dumpgrmbin(XTX, nrows, numsnps, indivmarkers, numindivs, grmoutname)  ;
+---
+>    dumpgrmbin(XTX, xindex, nrows, numsnps, indivmarkers, numindivs, grmoutname)  ;
+3010c2429
+<   double y_norm_recip ;
+---
+>   double y_norm ;
+3014c2433
+<   y_norm_recip = ((double)nrows) / asum(d,nrows);
+---
+>   y_norm = asum(d,nrows) / (double) nrows ;
+3020c2439,2441
+<     y = XTX[a*nrows+b] ; // bugfix: do NOT want to dereference xindex here
+---
+>     xa = xindex[a] ;
+>     xb = xindex[b] ;
+>     y = XTX[xa*nrows+xb] ;
+3023c2444
+<     fprintf(fff, "%0.6f\n", y * y_norm_recip) ;
+---
+>     fprintf(fff, "%0.6f\n", y/y_norm) ;

@@ -1,0 +1,25 @@
+Partial list of Authors of eigensoft
+
+Nick Patterson
+Alkes Price
+Sam Pollack 
+Sasha Gusev
+Chris Chang 
+Kevin Galinsky
+
+========================================================
+fastmode:  YES  
+optional parameters 
+ fastdim:   (default 2 * numeigs)
+ fastiter:  (default  numeigs)
+
+In fastmode 
+ A .evec and .eval file wiil be produced on request but:
+
+NO outlier removal
+NO Tracy-Widom significance testing
+NO lsqproject mode 
+NO F_st.   (Use fstonly: YES) if this is wanted.
+
+If fastmode and easymode set, NO projection
+

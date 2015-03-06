@@ -1,0 +1,49 @@
+#ifndef _THREAD_ 
+#define _THREAD_
+
+#include <admutils.h>
+
+// globals defined in smartpca.c
+extern int ldregress;
+extern int minallelecnt;
+extern int maxmissing;
+extern int numthreads;
+extern double ldlimit;
+
+extern pthread_mutex_t mutex_xtx;
+extern pthread_mutex_t mutex_nkill;
+
+
+typedef struct thread_args  {
+
+  int mythreadnum;
+
+  SNP **xsnplist;
+  double *xmean;
+  double *xfancy;
+  int *xindex;
+  int *xtypes;
+
+  int numindivs;
+  int nrows;
+  int ncols;
+  int blocksize;
+  int weightmode;
+
+  int nkill;     // out
+  int nused;     // out
+
+  double *XTX;
+
+} thread_args_t;
+
+
+void *thread_function(void *args);
+
+thread_args_t *pack_args(int mythreadnum, SNP **xsnplist, double *xmean, double *xfancy, int *xindex, int *xtypes, double *XTX, 
+  int numindivs, int nrows, int ncols, int blocksize, int weightmode); 
+
+void unpack_args(thread_args_t *ta, int *nkill, int *nused);
+
+#endif
+

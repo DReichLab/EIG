@@ -1,0 +1,11 @@
+genotypename: example.geno
+snpname: example.snp
+indivname: example.ind
+evecoutname: example.pca.evec
+evaloutname: example.eval
+altnormstyle: NO
+numoutevec: 2
+numoutlieriter: 5
+numoutlierevec: 2
+outliersigmathresh: 6.0
+qtmode: 0

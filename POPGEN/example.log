@@ -1,0 +1,62 @@
+parameter file: par.example
+### THE INPUT PARAMETERS
+##PARAMETER NAME: VALUE
+genotypename: ../CONVERTF/example.ped
+snpname: ../CONVERTF/example.map
+indivname: ../CONVERTF/example.ped
+evecoutname: example.evec
+evaloutname: example.eval
+altnormstyle: NO
+numoutevec: 2
+familynames: NO
+grmoutname: grmjunk
+## smartpca version: 13050
+norm used
+
+genotype file processed
+number of samples used: 5 number of snps used: 7
+Using 2 threads, and partial sum lookup algorithm.
+total number of snps killed in pass: 0  used: 7
+grm dumped
+
+## To get Tracy-Widom statistics: recompile smartpca with TWTAB correctly specified in Makefile, or
+   just run twstats (see README file in POPGEN directory)
+    kurtosis           snps    indivs
+ eigenvector    1     1.271     1.505
+ eigenvector    2     1.796     2.127
+population:   0                 Case    2
+population:   1              Control    3
+
+## Average divergence between populations:
+                 Case    Control     popsize
+      Case      0.849      3.298           2
+   Control      3.298      1.151           3
+
+
+number of blocks for moving block jackknife: 1
+fst *1000:
+          C     C 
+   C      0     0
+   C      0     0
+
+s.dev * 1000000:
+          C     C 
+   C      0     0
+   C      0     0
+
+eigenvector 1:means
+             Control     -0.336
+                Case      0.505
+## Anova statistics for population differences along each eigenvector:
+                                              p-value
+             eigenvector_1_Case_Control_     0.0262738 
+eigenvector 2:means
+             Control     -0.056
+                Case      0.084
+             eigenvector_2_Case_Control_      0.805663 
+
+## Statistical significance of differences beween populations:
+                                pop1                  pop2      chisq          p-value   |pop1|   |pop2|
+popdifference:                  Case               Control         9.554    0.00842201       2       3
+
+##end of smartpca run

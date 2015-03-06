@@ -1,0 +1,25 @@
+#!/usr/local/bin/perl  -w 
+
+## a better green color for gnuplot (dark green)
+## and yellow
+ 
+ ($IN) = @ARGV ;  
+ $T1 = "/tmp/t1fg.$$" ;
+ system "cp $IN $IN.bak" ;  
+ open (FF, $IN) || die "can't open $IN\n" ;
+ open (YY, ">$T1") || die "can't open $T1\n" ;
+ foreach $line (<FF>) {  
+  chomp $line ;
+  ($a) = split " ", $line ;
+  if ($a eq "/LT1")  {  
+   $line = "/LT1 { PL [4 dl 2 dl] .2 .4 0 DL } def" ;
+  }
+  if ($a eq "/LT5")  {  
+   $line = "/LT5 { PL [4 dl 2 dl]  1 .8 0 DL } def" ;
+  }
+  print YY "$line\n" ; 
+ }
+close FF ;
+close YY ;
+system "cp $T1 $IN" ;
+unlink $T1 ;

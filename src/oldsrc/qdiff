@@ -1,0 +1,45 @@
+717,718c717
+<     kjg_fastpca(ncols, nrows,
+<             numeigs, fastdim, fastiter,
+---
+>     kjg_fpca(numeigs, fastdim, fastiter,
+3111,3142d3109
+<   fprintf(ofile, "%20s ", "#eigvals:") ;
+<   for (j=0; j<numeigs; j++) { 
+<     fprintf(ofile, "%9.3f ", eigenvals[j]) ;
+<   }
+<   fprintf(ofile, "\n") ;
+< 
+<   if (easymode) { 
+< // should be separate routine
+< 
+<    ZALLOC(fvecs, nrows*numeigs, double) ;
+<    setfvecs(fvecs, eigenvecs, nrows, numeigs) ;
+< 
+<     for (j=0; j<numeigs; j++) { 
+<      xpt = fvecs+j*nrows ;
+<      y = asum2(xpt, nrows) ;
+<      vst(xpt, xpt, 1.0/sqrt(y), nrows) ;  // norm 1
+<     }
+<     for (i=0; i < nrows ; i++)  { 
+<           indx = xindlist[i] ;
+< 	  fprintf(ofile, "%20s ", indx -> ID) ;
+< 	  for (j=0; j<numeigs; j++) { 
+<            xpt = fvecs+j*nrows ;
+<            y = xpt[i] ;
+<            fprintf(ofile, "%10.4f  ", y) ;
+< 	  }
+< 	  fprintf(ofile, "%15s\n", indx -> egroup) ;
+<    }
+<    free(fvecs) ;
+<    return ;
+<  }
+< 
+< 
+3191a3159,3164
+> 
+>   fprintf(ofile, "%20s ", "#eigvals:") ;
+>   for (j=0; j<numeigs; j++) { 
+>     fprintf(ofile, "%9.3f ", eigenvals[j]) ;
+>   }
+>   fprintf(ofile, "\n") ;
