@@ -15,11 +15,11 @@ endif
 ifdef OPENBLAS
 CFLAGS  = -I../include -I$(OPENBLAS)/include -D_GNU_SOURCE
 LDFLAGS = -L$(OPENBLAS)/lib -D_GNU_SOURCE
-LDLIBS  = -Wl,-Bdynamic -lgsl -Wl,-Bstatic -lopenblas -Wl,-Bdynamic -lgfortran -pthread -lm
+LDLIBS  = -Wl,-Bdynamic -lgsl -Wl,-Bstatic -lopenblas -Wl,-Bdynamic -lgfortran -pthread -lm -llapacke
 else
 CFLAGS  = -I../include -D_GNU_SOURCE
 LDFLAGS = -D_GNU_SOURCE
-LDLIBS  = -lgsl -lopenblas -lgfortran -pthread -lm
+LDLIBS  = -lgsl -lopenblas -lgfortran -pthread -lm -llapacke
 endif
 
 CC = gcc
