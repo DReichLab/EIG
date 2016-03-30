@@ -14,10 +14,10 @@
 
 extern size_t KJG_FPCA_ROWS; // number of rows to process at once
 
-void kjg_fastpca(SNP **snpmarkers, Indiv **indivmarkers,
-        size_t numsnps, size_t numindivs,
-        size_t K, size_t L, size_t I,
-        double *eigenvals, double *eigenvecs);
+void
+kjg_fastpca (SNP **snpmarkers, Indiv **indivmarkers, size_t numsnps,
+             size_t numindivs, size_t K, size_t L, size_t I, double *eigenvals,
+             double *eigenvecs);
 
 /**
  * FastPCA blanczos step
@@ -28,8 +28,9 @@ void kjg_fastpca(SNP **snpmarkers, Indiv **indivmarkers,
  * @param *H matrix to store product (MxIL)
  */
 
-void kjg_fpca_blanczos(SNP **snpmarkers, Indiv **indivmarkers, size_t numsnps, size_t numindivs, double *M, gsl_matrix* G,
-        gsl_matrix* H);
+void
+kjg_fpca_blanczos (SNP **snpmarkers, Indiv **indivmarkers, size_t numsnps,
+                   size_t numindivs, double *M, gsl_matrix* G, gsl_matrix* H);
 
 /**
  * Multiply G2 = XT*H = XT*X*G1
@@ -41,8 +42,10 @@ void kjg_fpca_blanczos(SNP **snpmarkers, Indiv **indivmarkers, size_t numsnps, s
  * @param *G2 next matrix
  */
 
-void kjg_fpca_XTXG(SNP **snpmarkers, Indiv **indivmarkers, size_t numsnps, size_t numindivs, double *M, gsl_matrix *G1,
-        gsl_matrix *H, gsl_matrix *G2);
+void
+kjg_fpca_XTXG (SNP **snpmarkers, Indiv **indivmarkers, size_t numsnps,
+               size_t numindivs, double *M, gsl_matrix *G1, gsl_matrix *H,
+               gsl_matrix *G2);
 
 /**
  * Multiply H = X*G
@@ -53,8 +56,9 @@ void kjg_fpca_XTXG(SNP **snpmarkers, Indiv **indivmarkers, size_t numsnps, size_
  * @param *H another matrix
  */
 
-void kjg_fpca_XG(SNP **snpmarkers, Indiv **indivmarkers, size_t numsnps, size_t numindivs, double *M, gsl_matrix *G,
-        gsl_matrix *H);
+void
+kjg_fpca_XG (SNP **snpmarkers, Indiv **indivmarkers, size_t numsnps,
+             size_t numindivs, double *M, gsl_matrix *G, gsl_matrix *H);
 
 /**
  * Multiply G = XT*H
@@ -65,7 +69,8 @@ void kjg_fpca_XG(SNP **snpmarkers, Indiv **indivmarkers, size_t numsnps, size_t 
  * @param *G another matrix
  */
 
-void kjg_fpca_XTH(SNP **snpmarkers, Indiv **indivmarkers, size_t numsnps, size_t numindivs, double *M, gsl_matrix *H,
-        gsl_matrix *G);
+void
+kjg_fpca_XTH (SNP **snpmarkers, Indiv **indivmarkers, size_t numsnps,
+              size_t numindivs, double *M, gsl_matrix *H, gsl_matrix *G);
 
 #endif /* KJG_FPCA_H_ */

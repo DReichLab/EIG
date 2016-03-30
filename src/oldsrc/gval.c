@@ -25,134 +25,145 @@ static double **gtable;
 static uint8_t *xind_mask;
 static size_t xtda;
 
-void setgval (
-        SNP ** xsnps,
-        int nrows,
-        Indiv ** indivmarkers,
-        int numindivs,
-        int *xindex,
-        int *xtypes,
-        int ncols) {
+void
+setgval (SNP ** xsnps, int nrows, Indiv ** indivmarkers, int numindivs,
+         int *xindex, int *xtypes, int ncols)
+{
 
-    double *cc;
-    int t, n0, n1, i, k, col;
-    SNP *cupt;
-    double mean, y;
+  double *cc;
+  int t, n0, n1, i, k, col;
+  SNP *cupt;
+  double mean, y;
 
-    unsetgval();
+  unsetgval ();
 
-    xxsnps = xsnps;
-    xnrows = nrows;
-    xncols = ncols;
-    xindivmarkers = indivmarkers;
-    xnumindivs = numindivs;
-    xxindex = xindex;
-    ZALLOC(cc, nrows, double);
-    ZALLOC(xmean, ncols, double);
-    ZALLOC(xfancy, ncols, double);
-    vclear(xfancy, 1.0, ncols);
-    gtable = initarray_2Ddouble(ncols, 4, 0);
+  xxsnps = xsnps;
+  xnrows = nrows;
+  xncols = ncols;
+  xindivmarkers = indivmarkers;
+  xnumindivs = numindivs;
+  xxindex = xindex;
+  ZALLOC(cc, nrows, double);
+  ZALLOC(xmean, ncols, double);
+  ZALLOC(xfancy, ncols, double);
+  vclear (xfancy, 1.0, ncols);
+  gtable = initarray_2Ddouble (ncols, 4, 0);
 
-    xtda = (xnrows + 3) / 4;
+  xtda = (xnrows + 3) / 4;
 
-    for (i = 0; i < ncols; ++i) {
-        col = i;
-        cupt = xsnps[i];
-        /**
-         if (i>=0) {
-         printf("zz: %d %s\n", cupt -> ID) ;  fflush(stdout) ;
-         }
-         */
-        getcolxz(cc, cupt, xindex, xtypes, nrows, i, xmean, xfancy, &n0, &n1);
+  for (i = 0; i < ncols; ++i)
+    {
+      col = i;
+      cupt = xsnps[i];
+      /**
+       if (i>=0) {
+       printf("zz: %d %s\n", cupt -> ID) ;  fflush(stdout) ;
+       }
+       */
+      getcolxz (cc, cupt, xindex, xtypes, nrows, i, xmean, xfancy, &n0, &n1);
 
-        mean = xmean[col] / xfancy[col];
-        for (k = 0; k < 3; ++k) {
-            y = ((double) k) - mean;
-            y *= xfancy[col];
-            gtable[col][k] = y / sqrt(2.0);
+      mean = xmean[col] / xfancy[col];
+      for (k = 0; k < 3; ++k)
+        {
+          y = ((double) k) - mean;
+          y *= xfancy[col];
+          gtable[col][k] = y / sqrt (2.0);
         }
-        gtable[col][3] = 0;
+      gtable[col][3] = 0;
 
-        t = MIN(n0, n1);
-        if (t == 0) cupt->ignore = YES;	// side-effect
+      t = MIN(n0, n1);
+      if (t == 0)
+        cupt->ignore = YES;	// side-effect
     }
 
-    set_ind_mask();
+  set_ind_mask ();
 
-    free(cc);
+  free (cc);
 }
 
-void set_ind_mask () {
-    size_t i, j, k;
-    xind_mask = calloc(xtda, sizeof(uint8_t));
-    for (i = 0; i < xnrows; i++) {
-        if (xindivmarkers[i]->ignore) {
-            j = i / 4;
-            k = (3 - (i % 4)) * 2;
-            xind_mask[j] |= 3 << k;
+void
+set_ind_mask ()
+{
+  size_t i, j, k;
+  xind_mask = calloc (xtda, sizeof(uint8_t));
+  for (i = 0; i < xnrows; i++)
+    {
+      if (xindivmarkers[i]->ignore)
+        {
+          j = i / 4;
+          k = (3 - (i % 4)) * 2;
+          xind_mask[j] |= 3 << k;
         }
     }
 
 }
 
-void unsetgval () {
-    if (xxsnps == NULL) return;
+void
+unsetgval ()
+{
+  if (xxsnps == NULL)
+    return;
 
-    xxsnps = NULL;
-    xindivmarkers = NULL;
-    xxindex = NULL;
+  xxsnps = NULL;
+  xindivmarkers = NULL;
+  xxindex = NULL;
 
-    free2D(&gtable, xncols);
+  free2D (&gtable, xncols);
 
-    gtable = NULL;
+  gtable = NULL;
 
-    free(xmean);
-    free(xfancy);
-    free(xind_mask);
+  free (xmean);
+  free (xfancy);
+  free (xind_mask);
 }
 
-int getgval (int row, int col, double *val) {
+int
+getgval (int row, int col, double *val)
+{
 
-    /**
-     if (row>=xnrows) fatalx("row index overflow\n") ;
-     if (col>=xncols) fatalx("col index overflow\n") ;
-     */
+  /**
+   if (row>=xnrows) fatalx("row index overflow\n") ;
+   if (col>=xncols) fatalx("col index overflow\n") ;
+   */
 
-    return getggval(xxindex[row], col, val);
+  return getggval (xxindex[row], col, val);
 
 }
 
-int getggval (int indindx, int col, double *val)
+int
+getggval (int indindx, int col, double *val)
 // indindex is index in full array
 {
-    SNP *cupt;
-    int t, z;
-    double y, mean;
+  SNP *cupt;
+  int t, z;
+  double y, mean;
 
-    *val = 0;
-    if (xindivmarkers[indindx]->ignore) return -1;
-    cupt = xxsnps[col];
-    t = getgtypes(cupt, indindx);
-    if (t < 0) return t;
-
-    *val = gtable[col][t];
+  *val = 0;
+  if (xindivmarkers[indindx]->ignore)
+    return -1;
+  cupt = xxsnps[col];
+  t = getgtypes (cupt, indindx);
+  if (t < 0)
     return t;
+
+  *val = gtable[col][t];
+  return t;
 
 // dead code
-    y = (double) t;
-    mean = xmean[col] / xfancy[col];
-    y -= mean;
-    y *= xfancy[col];
+  y = (double) t;
+  mean = xmean[col] / xfancy[col];
+  y -= mean;
+  y *= xfancy[col];
 
-    /**
-     z = ranmod(10000000) ;
-     if (z==0) {
-     printf("zzcheck: %d %d %12.6f %12.6f   %12.6f\n", indindx, col, xmean[col], xfancy[col], y) ;
-     }
-     */
+  /**
+   z = ranmod(10000000) ;
+   if (z==0) {
+   printf("zzcheck: %d %d %12.6f %12.6f   %12.6f\n", indindx, col, xmean[col], xfancy[col], y) ;
+   }
+   */
 
-    *val = y / sqrt(2.0);
-    return t;
+  *val = y / sqrt (2.0);
+  return t;
 
 }
 
@@ -167,14 +178,19 @@ int getggval (int indindx, int col, double *val)
 #define U3(n) U2(n), U2((n)+(1<<4)), U2((n)+(2<<4)), U2((n)+(3<<4))
 
 // the unpacking table
-static const uint8_t UL[256][4] = { U3(0), U3(1<<6), U3(2<<6), U3(3<<6) };
+static const uint8_t UL[256][4] =
+  { U3(0), U3(1<<6), U3(2<<6), U3(3<<6) };
 
-size_t get_nrows () {
-    return (xnrows);
+size_t
+get_nrows ()
+{
+  return (xnrows);
 }
 
-size_t get_ncols () {
-    return (xncols);
+size_t
+get_ncols ()
+{
+  return (xncols);
 }
 
 /**
@@ -182,31 +198,34 @@ size_t get_ncols () {
  * @param snp_index
  * @param *y arrayref to store data
  */
-void kjg_geno_get_normalized_row (const size_t snp_index, double* y) {
-    size_t j;
+void
+kjg_geno_get_normalized_row (const size_t snp_index, double* y)
+{
+  size_t j;
 
-    // Newer method looking up 4 at once
+  // Newer method looking up 4 at once
 
-    size_t t = xtda;
-    uint8_t* packed = xxsnps[snp_index]->pbuff;
-    uint8_t* ind_mask = xind_mask;
-    double* norm_lookup = gtable[snp_index];
+  size_t t = xtda;
+  uint8_t* packed = xxsnps[snp_index]->pbuff;
+  uint8_t* ind_mask = xind_mask;
+  double* norm_lookup = gtable[snp_index];
 
-    while (--t) {
-        const uint8_t* u = UL[*(packed++) | *(ind_mask++)];
-        for (j = 0; j < 4; j++)
-            *(y++) = norm_lookup[*(u++)];
+  while (--t)
+    {
+      const uint8_t* u = UL[*(packed++) | *(ind_mask++)];
+      for (j = 0; j < 4; j++)
+        *(y++) = norm_lookup[*(u++)];
     }
 
-    const uint8_t* u = UL[*packed | *ind_mask];
-    for (j = (xtda - 1) * 4; j < xnrows; j++)
-        *(y++) = norm_lookup[*(u++)];
+  const uint8_t* u = UL[*packed | *ind_mask];
+  for (j = (xtda - 1) * 4; j < xnrows; j++)
+    *(y++) = norm_lookup[*(u++)];
 
-    // using getgval (slower)
-/*
-    for (j = 0; j < xnrows; j++)
-	getgval (j, snp_index, y++);
-*/
+  // using getgval (slower)
+  /*
+   for (j = 0; j < xnrows; j++)
+   getgval (j, snp_index, y++);
+   */
 
 }
 
@@ -216,11 +235,14 @@ void kjg_geno_get_normalized_row (const size_t snp_index, double* y) {
  * @param *unpacked arrayref to store data
  */
 
-size_t kjg_geno_get_normalized_rows (const size_t i, const size_t r, double* Y) {
-    size_t j;
-    for (j = i; j < i + r && j < xncols; j++) {
-        kjg_geno_get_normalized_row(j, Y);
-        Y += xnrows;
+size_t
+kjg_geno_get_normalized_rows (const size_t i, const size_t r, double* Y)
+{
+  size_t j;
+  for (j = i; j < i + r && j < xncols; j++)
+    {
+      kjg_geno_get_normalized_row (j, Y);
+      Y += xnrows;
     }
-    return (j - i);
+  return (j - i);
 }

@@ -20,8 +20,8 @@
  * @param *template character template for fprintf
  */
 
-void kjg_gsl_matrix_fprintf(FILE* stream, gsl_matrix* m, char* template);
-
+void
+kjg_gsl_matrix_fprintf (FILE* stream, gsl_matrix* m, char* template);
 
 /**
  * Print the eigenvalues and then eigenvectors below
@@ -31,16 +31,21 @@ void kjg_gsl_matrix_fprintf(FILE* stream, gsl_matrix* m, char* template);
  * @param *evec eigenvectors
  * @param *template character template for fprintf */
 
-void kjg_gsl_evec_fprintf(FILE* stream, gsl_vector* eval, gsl_matrix* evec, char* template);
+void
+kjg_gsl_evec_fprintf (FILE* stream, gsl_vector* eval, gsl_matrix* evec,
+                      char* template);
 
-void kjg_gsl_matrix_fscanf(FILE* stream, gsl_matrix* m);
-int kjg_gsl_evec_fscanf(FILE* stream, gsl_vector* eval, gsl_matrix* evec);
+void
+kjg_gsl_matrix_fscanf (FILE* stream, gsl_matrix* m);
+int
+kjg_gsl_evec_fscanf (FILE* stream, gsl_vector* eval, gsl_matrix* evec);
 
 /**
  * Initialize random number generation.
  */
 
-gsl_rng *kjg_gsl_rng_init();
+gsl_rng *
+kjg_gsl_rng_init ();
 
 /**
  * Initialize the matrix with random unit gaussians
@@ -49,7 +54,8 @@ gsl_rng *kjg_gsl_rng_init();
  * @param *r random number generator
  */
 
-void kjg_gsl_matrix_set_ran_ugaussian(gsl_matrix* m, gsl_rng* r);
+void
+kjg_gsl_matrix_set_ran_ugaussian (gsl_matrix* m, gsl_rng* r);
 
 /**
  * Normalize the matrix so the frobenius norm is M*N
@@ -58,7 +64,8 @@ void kjg_gsl_matrix_set_ran_ugaussian(gsl_matrix* m, gsl_rng* r);
  * @return if error
  */
 
-int kjg_gsl_matrix_frobenius_normalize(gsl_matrix* m);
+int
+kjg_gsl_matrix_frobenius_normalize (gsl_matrix* m);
 
 /**
  * Calculate the norm of a matrix
@@ -68,6 +75,7 @@ int kjg_gsl_matrix_frobenius_normalize(gsl_matrix* m);
  * @return norm
  */
 
-double kjg_gsl_dlange(char norm, gsl_matrix* m);
+double
+kjg_gsl_dlange (char norm, gsl_matrix* m);
 
 #endif /* KJG_GSL_H_ */
