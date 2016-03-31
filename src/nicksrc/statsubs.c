@@ -1,13 +1,16 @@
 #include <stdio.h>
-#include <math.h> 
+#include <math.h>
+#include <string.h>
 
-#include "statsubs.h" 
-#include "vsubs.h" 
+#include "statsubs.h"
+#include "vsubs.h"
 
-#define EPS1 .001 
-#define EPS2 1.0e-12 
-#define ZLIM 20 
-#define QSIZE 10 
+#include "twtable.h"
+
+#define EPS1 .001
+#define EPS2 1.0e-12
+#define ZLIM 20
+#define QSIZE 10
 
 static double *bern; /* bernouilli numbers */
 static int bernmax = 0;
@@ -41,11 +44,10 @@ weightjackx (double *est, double *sig, double mean, double *jmean, double *jwt,
 static int twtabsize = -1;
 static double *twxval, *twxpdf, *twxtail;
 
-#define TWXTABLE TWTAB  
 static char *twxtable = NULL;
 
 static double **bcotable = NULL;
-static int bcosize = -1;  // max val of binomial coefficient  
+static int bcosize = -1;	// max val of binomial coefficient  
 
 double
 nordis (double zval)
@@ -73,7 +75,6 @@ ntail (double zval)
 /** normal distribution tail area 
  uses erfc 
  */
-
 {
   double pi, t;
   double p, q, d;
@@ -147,7 +148,7 @@ medchi (int *cls, int len, int *n0, int *n1, double *xtail)
       if (cls[i] == 1)
         ++*n1;
     }
-  if (MIN(*n0,*n1) == 0)
+  if (MIN (*n0, *n1) == 0)
     {
       *xtail = 1.0;
       return 0;
@@ -187,7 +188,7 @@ double
 ks2 (int *cls, int len, int *n0, int *n1, double *kstail)
 {
   /*
-   compute KS statistic 
+   compute KS statistic
    cls should be 0 or 1.  if larger take as invalid
    */
   int i;
@@ -213,7 +214,7 @@ ks2 (int *cls, int len, int *n0, int *n1, double *kstail)
       if (cls[i] == 1)
         ++*n1;
     }
-  if (MIN(*n0,*n1) == 0)
+  if (MIN (*n0, *n1) == 0)
     {
       /**
        printf("warning ks2 has only 1 class passed\n") ;
@@ -249,11 +250,11 @@ ks2 (int *cls, int len, int *n0, int *n1, double *kstail)
   y *= ymax;
   *kstail = probks (y);
   return y;
-  /** crude analysis:  
-   variance of 1 step above is (1/n0 + 1/n1) / (n0+n1) 
-   and so variance of y is brownian motion not bridge is (1/n0+1/n1) 
-   We want to rescale y to correspond to Brownian bridge.  
-   First order correction is en.  We actually use 
+  /** crude analysis:
+   variance of 1 step above is (1/n0 + 1/n1) / (n0+n1)
+   and so variance of y is brownian motion not bridge is (1/n0+1/n1)
+   We want to rescale y to correspond to Brownian bridge.
+   First order correction is en.  We actually use
    a Bartlett correction of some sort 
    Normalized y seems like what to return.
    */
@@ -290,8 +291,8 @@ conchiv (double *a, int m, int n)
   double *rsum, *csum, ee, tot = 0, chsq = 0, y;
   int i, j, k;
 
-  ZALLOC(rsum,m,double);
-  ZALLOC(csum,n,double);
+  ZALLOC(rsum, m, double);
+  ZALLOC(csum, n, double);
 
   for (i = 0; i < m; i++)
     {
@@ -339,8 +340,8 @@ z2x2 (double *a)
   double *rsum, *csum, ee, tot = 0, chsq = 0, y, dev00, z;
   int i, j, k, m = 2, n = 2;
 
-  ZALLOC(rsum,m,double);
-  ZALLOC(csum,n,double);
+  ZALLOC(rsum, m, double);
+  ZALLOC(csum, n, double);
 
   for (i = 0; i < m; i++)
     {
@@ -387,8 +388,8 @@ conchi (double *a, int m, int n)
   double *rsum, *csum, ee, tot = 0, chsq = 0, y;
   int i, j, k;
 
-  ZALLOC(rsum,m,double);
-  ZALLOC(csum,n,double);
+  ZALLOC(rsum, m, double);
+  ZALLOC(csum, n, double);
 
   for (i = 0; i < m; i++)
     {
@@ -447,8 +448,8 @@ chitest (double *a, double *p, int n)
       return 0.0;
     }
 
-  ZALLOC(x,n,double);
-  ZALLOC(b,n,double);
+  ZALLOC(x, n, double);
+  ZALLOC(b, n, double);
 
   vst (x, pp, y2 / y1, n); /* expected */
 
@@ -465,6 +466,7 @@ chitest (double *a, double *p, int n)
   return y1;
 
 }
+
 double
 zprob (double ptail)
 /** inverse normal */
@@ -534,9 +536,9 @@ setzptable ()
 double
 znewt (double z, double ptail)
 {
-  /** 
-   newton step 
-   z is very good approximation 
+  /**
+   newton step
+   z is very good approximation
    */
   double p0, pder, h;
   double pi, zz;
@@ -556,6 +558,7 @@ znewt (double z, double ptail)
     }
   return zz;
 }
+
 int
 ifirstgt (int val, int *tab, int n)
 {
@@ -594,10 +597,10 @@ mleg (double a1, double a2, double *p, double *lam)
   double top, bot, fval;
   int debug = NO;
 
-  /** 
-   solve 
+  /**
+   solve
    p/lam = a1 ; psi(p) - log(lam) = a2 ;
-   Thus psi(p) - log(p) = a2 - log(a1) 
+   Thus psi(p) - log(p) = a2 - log(a1)
    */
   s = a2 - log (a1);
 
@@ -901,7 +904,7 @@ bernload ()
   if (bernmax > 0)
     return;
   bernmax = 14;
-  ZALLOC(bern, bernmax+1, double);
+  ZALLOC(bern, bernmax + 1, double);
   bern[0] = 1.0;
   bern[1] = -1.0 / 2.0;
   bern[2] = 1.0 / 6.0;
@@ -912,6 +915,7 @@ bernload ()
   bern[12] = -691.0 / 2730.0;
   bern[14] = 7.0 / 6.0;
 }
+
 double
 bernum (int k)
 {
@@ -958,8 +962,8 @@ li2 (double x)
 double
 hwstat (double *x)
 /** Hardy-Weinberg equilibrium test 
- returns standard normal in null case. 
- +sign is excess heterozygosity 
+ returns standard normal in null case.
+ +sign is excess heterozygosity
  x[0] [1] [2] are counts for homozm hetero homo (alt allele)
  */
 {
@@ -1084,7 +1088,7 @@ binlogtail (int n, int t, double p, char c)
   double *bindis;
   double val, base;
 
-  ZALLOC(bindis, n+1, double);
+  ZALLOC(bindis, n + 1, double);
   genlogbin (bindis, n, p);
   base = bindis[t];
   vsp (bindis, bindis, -base, n + 1);
@@ -1106,15 +1110,15 @@ binlogtail (int n, int t, double p, char c)
 double
 binomtail (int n, int t, double p, char c)
 {
-  /** 
-   c = '+':   P(S>=t) 
-   c = '-':   P(S<t) 
-   WARNING <= t use binomtail(n, t+1, ... 
+  /**
+   c = '+':   P(S>=t)
+   c = '-':   P(S<t)
+   WARNING <= t use binomtail(n, t+1, ...
    */
   double *bindis;
   double val;
 
-  ZALLOC(bindis, n+1, double);
+  ZALLOC(bindis, n + 1, double);
   genlogbin (bindis, n, p);
   vexp (bindis, bindis, n + 1);
   if (c == '+')
@@ -1124,6 +1128,7 @@ binomtail (int n, int t, double p, char c)
   free (bindis);
   return val;
 }
+
 void
 genbin (double *a, int n, double p)
 {
@@ -1156,7 +1161,7 @@ genlogbin (double *a, int n, double p)
   q = 1.0 - p;
   plog = log (p), qlog = log (q);
 
-  ZALLOC(lfac,n+1,double);
+  ZALLOC(lfac, n + 1, double);
   for (i = 1; i <= n; i++)
     {
       x = (double) i;
@@ -1188,7 +1193,7 @@ xlgamma (double x)
 
   t = (int) sizeof(long);
   if (t >= 8)
-    return lgamma (x);  // 64 bit machines 
+    return lgamma (x);		// 64 bit machines 
   if (l2pi < 0.0)
     l2pi = log (4.0 * acos (0.0));
   bernload ();
@@ -1338,11 +1343,11 @@ critchi (int df, double p)
  Tabstops:     4
  */
 
-#ifndef	I_PI        /* 1 / pi */
+#ifndef	I_PI			/* 1 / pi */
 #define	I_PI        0.3183098861837906715377675
 #endif
-#define	F_EPSILON     0.000001       /* accuracy of critf approximation */
-#define	F_MAX      9999.0            /* maximum F ratio */
+#define	F_EPSILON     0.000001	/* accuracy of critf approximation */
+#define	F_MAX      9999.0	/* maximum F ratio */
 
 double
 rtlf (int df1, int df2, double F)
@@ -1350,8 +1355,7 @@ rtlf (int df1, int df2, double F)
   return pof (F, df1, df2);
 }
 
-static
-double
+static double
 pof (double F, int df1, int df2)
 {
   int i, j;
@@ -1389,7 +1393,7 @@ pof (double F, int df1, int df2)
       p = w * z;
     }
   y = 2.0 * w / z;
-#ifdef	REMARK /* speedup modification suggested by Tolman (wrong answer!) */
+#ifdef	REMARK			/* speedup modification suggested by Tolman (wrong answer!) */
   if (a == 1)
   for (j = b + 2; j <= df2; j += 2)
     {
@@ -1401,8 +1405,8 @@ pof (double F, int df1, int df2)
       double zk = 1.0;
       for (j = (df2 - 1) / 2; j; j--)
       zk *= z;
-      d *= zk * df2/b;
-      p *= zk + w * z * (zk - 1.0)/(z-1.0);
+      d *= zk * df2 / b;
+      p *= zk + w * z * (zk - 1.0) / (z - 1.0);
     }
 #else /* original version */
   for (j = b + 2; j <= df2; j += 2)
@@ -1410,7 +1414,7 @@ pof (double F, int df1, int df2)
       d *= (1.0 + a / (j - 2.0)) * z;
       p = (a == 1 ? p + d * y / (j - 1.0) : (p + w) * z);
     }
-#endif	
+#endif
   y = w * z;
   z = 2.0 / z;
   b = df2 - 2;
@@ -1438,6 +1442,7 @@ ltlg (double a, double x)
     return ltlg1 (a, x);
   return ltlg2 (a, x);
 }
+
 // incomplete gamma function.  P(z>x) if  standard gamma  shape a
 double
 rtlg (double a, double x)
@@ -1513,6 +1518,7 @@ rtlg2 (double a, double x)
     fatalx ("bad rtlg2\n");
   return y1;
 }
+
 void
 cinterp (double val, double x0, double x1, double f0, double f0p, double f1,
          double f1p, double *fv, double *fvp);
@@ -1659,7 +1665,7 @@ dotwcalc (double *lambda, int m, double *ptw, double *pzn, double *pzvar,
   vst (evals, lambda, y, m);
   top = (double) (m * (m + 2));
   bot = asum2 (evals, m) - (double) m;
-  zn = top / bot;  // see appendix to eigenpaper  NJP
+  zn = top / bot;		// see appendix to eigenpaper  NJP
   y = evals[0] * zn;
   tw = twnorm (y, tm, zn);
   *pzn = zn;
@@ -1668,10 +1674,11 @@ dotwcalc (double *lambda, int m, double *ptw, double *pzn, double *pzvar,
   free (evals);
   return tail;
 }
+
 int
 numgtz (double *a, int n)
 {
-#define THRESH  .000001  
+#define THRESH  .000001
 
   int num, k;
 
@@ -1738,7 +1745,8 @@ settwxtable (char *table)
   if (twxtable != NULL)
     return 1;
   if (table == NULL)
-    twxtable = strdup (TWXTABLE);
+//    twxtable = strdup (TWXTABLE);
+    return 1;
   else
     twxtable = strdup (table);
   fff = fopen (twxtable, "r");
@@ -1751,7 +1759,6 @@ settwxtable (char *table)
 void
 gettw (double x, double *tailp, double *densp)
 // main routine for accessing twtable
-
 {
   int k, n;
   double x0, x1, f0, f1, f0p, f1p;
@@ -1759,17 +1766,13 @@ gettw (double x, double *tailp, double *densp)
 
   if (twtabsize == -1)
     {
-
-      if (settwxtable (TWXTABLE) < 0)
-        fatalx ("twtable not readable %s\n", TWXTABLE);
-      k = numlines (twxtable);
-      ZALLOC(twxval, k, double);
-      ZALLOC(twxpdf, k, double);
-      ZALLOC(twxtail, k, double);
-      xx[0] = twxval;
-      xx[1] = twxtail;
-      xx[2] = twxpdf;
-      twtabsize = getxx (xx, k, 3, twxtable);
+      twtabsize = TWTABSIZE;
+      ZALLOC(twxval, twtabsize, double);
+      ZALLOC(twxpdf, twtabsize, double);
+      ZALLOC(twxtail, twtabsize, double);
+      memcpy (twxval, TWXVAL, twtabsize * sizeof(double));
+      memcpy (twxpdf, TWXPDF, twtabsize * sizeof(double));
+      memcpy (twxtail, TWXTAIL, twtabsize * sizeof(double));
     }
   n = twtabsize;
 
@@ -1814,7 +1817,6 @@ cinterp (double val, double x0, double x1, double f0, double f0p, double f1,
 // cubic interpolation val should be between x0 and x1
 // fv is function at x 
 // fvp is derivative
-
 {
 
   double inc, yval, f, fp, a0, b0, a1, b1, a2, a3;
@@ -1898,6 +1900,7 @@ betaix (double a, double b, double lo, double hi)
   return y2 - y1;
 
 }
+
 double
 betai (double a, double b, double x)
 {
@@ -1921,9 +1924,10 @@ betai (double a, double b, double x)
     /* Use continued faction after making */
     return 1.0 - bt * betacf (b, a, 1.0 - x) / b; /* the symmetry transformation. */
 }
+
 /*********************************************************************
- Continued fraction evaluation routine needed for the incomplete beta 
- function, I_x(a,b).	
+ Continued fraction evaluation routine needed for the incomplete beta
+ function, I_x(a,b).
  C.A. Bertulani        May/16/2000
  *********************************************************************/
 
@@ -1977,6 +1981,7 @@ betacf (double a, double b, double x)
     fatalx ("a or b too big, or MAXIT too small in betacf\n");
   return h;
 }
+
 void
 bpars (double *a, double *b, double mean, double var)
 {
@@ -1991,9 +1996,9 @@ bpars (double *a, double *b, double mean, double var)
   xb = x * (1 - m);
 
   /**
-   ym = xa/(xa+xb) ;  
+   ym = xa/(xa+xb) ;
    yv = xa*xb/((xa+xb)*(xa+xb)*(xa+xb+1)) ;
-   printf("%9.3f %9.3f\n", mean, ym) ;  
+   printf("%9.3f %9.3f\n", mean, ym) ;
    printf("%9.3f %9.3f\n", var, yv) ;
    */
 
@@ -2001,6 +2006,7 @@ bpars (double *a, double *b, double mean, double var)
   *b = xb;
 
 }
+
 void
 bmoments (double a, double b, double *mean, double *var)
 {
@@ -2013,12 +2019,13 @@ bmoments (double a, double b, double *mean, double *var)
   *var = (a * b) / (x * x * (x + 1));
 
 }
+
 double
 unbiasedest (int *ndx, int ndsize, int **counts)
 {
   /**
    ndx is ndsize array containing small integers coding pop index of each bracket (pop0 assumed)
-   thus ndsize = 4   ndx = (1,1,1,1) codes (p_0-p_1)^4  
+   thus ndsize = 4   ndx = (1,1,1,1) codes (p_0-p_1)^4
    thus ndsize = 4   ndx = (1,1,2,3) codes (p_0-p_1)^2  (p_0-p_2)  (p_0-p_3)
 
    counts [][] is integer array containing   counts[k][0] is count for variant allele for pop k
@@ -2033,7 +2040,7 @@ unbiasedest (int *ndx, int ndsize, int **counts)
 
   ivmaxmin (ndx, ndsize, &popmax, NULL);
   //printf("popmax: %d\n", popmax) ;
-  ZALLOC(tcounts, popmax+1, int);
+  ZALLOC(tcounts, popmax + 1, int);
 
   for (j = 0; j <= popmax; ++j)
     {
@@ -2079,7 +2086,7 @@ unbiasedest (int *ndx, int ndsize, int **counts)
           t = popind[j];
           s = 0;
           if (j > 0)
-            s = t % 2;  // flags sign 
+            s = t % 2;		// flags sign
           y = xmomest[j][t];
 
           if (y < -1.0)
@@ -2189,6 +2196,7 @@ weightjackx (double *est, double *sig, double mean, double *jmean, double *jwt,
   free (w2);
 
 }
+
 int
 modehprob (int n, int a, int m)
 // mode of hypergeometric.  
@@ -2199,23 +2207,23 @@ modehprob (int n, int a, int m)
   v = (double) (a + 1) * (m + 1) / (double) (n + 2);
   mode = nnint (v - 0.5);
 
-  /** 
-   v solves equation P(v) = P(v-1) 
-   since P is log-concave it follows that mode is in 
-   (v-1, v) 
+  /**
+   v solves equation P(v) = P(v-1)
+   since P is log-concave it follows that mode is in
+   (v-1, v)
    */
 
   /**
-   for (;;) { 
-   if (loghprob(n, a, m, mode) < loghprob(n, a, m, mode+1)) { 
+   for (;;) {
+   if (loghprob(n, a, m, mode) < loghprob(n, a, m, mode+1)) {
    mode = mode + 1 ;
    continue ;
    }
-   if (loghprob(n, a, m, mode) < loghprob(n, a, m, mode-1)) { 
+   if (loghprob(n, a, m, mode) < loghprob(n, a, m, mode-1)) {
    mode = mode - 1 ;
    continue ;
    }
-   break ; 
+   break ;
    }
    */
 
@@ -2257,6 +2265,7 @@ calcfc (double *c, int g, double rho)
   free (d);
 
 }
+
 void
 circconv (double *jp, double *c, double *jmean, int g)
 {
@@ -2264,7 +2273,7 @@ circconv (double *jp, double *c, double *jmean, int g)
   double *ww;
   int i, k;
 
-  ZALLOC(ww, 2*g, double);
+  ZALLOC(ww, 2 * g, double);
   copyarr (c, ww, g);
   copyarr (c, ww + g, g);
 
@@ -2279,6 +2288,7 @@ circconv (double *jp, double *c, double *jmean, int g)
 
   free (ww);
 }
+
 double
 bino (int a, int b)
 {
@@ -2294,6 +2304,7 @@ bino (int a, int b)
   return bcotable[a][b];
 
 }
+
 void
 setbino (int maxbco)
 {
@@ -2321,4 +2332,3 @@ destroy_bino ()
   free2D (&bcotable, bcosize);
   bcosize = -1;
 }
-
