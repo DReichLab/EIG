@@ -9,7 +9,7 @@ This file contains documentation of population structure programs:
   smartpca: run Principal Components Analysis on input genotype data.
   ploteig: construct plot of top 2 principal components
   twstats: compute number of statistically significant principal components.
-  evec2pca.perl: convert eigenvector file to format needed for EIGENSTRAT  
+  evec2pca.pl: convert eigenvector file to format needed for EIGENSTRAT  
   smartrel: identify related samples, accounting for population structure
 
 ------------------------------------------------------------------------
@@ -290,17 +290,17 @@ Example: see ./twexample.perl
 
 -----------------------------------------------------------------------
 
-DOCUMENTATION OF evec2pca.perl program:
+DOCUMENTATION OF evec2pca.pl program:
 
-The evec2pca.perl program is for users who want to run the EIGENSTRAT
+The evec2pca.pl program is for users who want to run the EIGENSTRAT
 stratification correction method on on output produced by the smartpca program.
 It converts the .evec file produced by smartpca to the .pca file needed by 
-EIGENSTRAT.  However, if using the smartpca.perl wrapper, evec2pca.perl is 
-called automatically so there is no need to separately run evec2pca.perl.
-See ../EIGENSTRAT/README for details on the smartpca.perl wrapper.
+EIGENSTRAT.  However, if using the smartpca.pl wrapper, evec2pca.pl is 
+called automatically so there is no need to separately run evec2pca.pl.
+See ../EIGENSTRAT/README for details on the smartpca.pl wrapper.
 
-The syntax of evec2pca.perl is
-../bin/evec2pca.perl k example.evec example.ind example.pca, where
+The syntax of evec2pca.pl is
+../bin/evec2pca.pl k example.evec example.ind example.pca, where
 k is the number of principal components in example.evec file (e.g. 10)
 example.evec is file of principal components produced by smartpca
 example.ind is individual file
