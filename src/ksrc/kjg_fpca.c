@@ -15,7 +15,7 @@
 #include "kjg_fpca.h"
 #include "kjg_gsl.h"
 
-#include "admutils.h" 
+#include "admutils.h"
 #include "gval.h"
 
 size_t KJG_FPCA_ROWS = 256;
@@ -49,8 +49,8 @@ kjg_fpca (size_t K, size_t L, size_t I, double *eval, double *evec)
       // do the multiplication
       kjg_fpca_XTXA (G1, &Qi.matrix, G2);
 
-      // orthonormalize (Gram-Schmidt equivalent)
-      kjg_gsl_matrix_QR (G2);
+      // scale to prevent G2 from blowing up
+      gsl_matrix_scale (G2, 1.0 / m);
 
       Gswap = G2;
       G2 = G1;
