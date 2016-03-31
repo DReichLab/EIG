@@ -4,7 +4,7 @@ The EIGENSOFT package implements methods from the following 2 papers:
 Patterson et al. 2006 PLoS Genet 2:e190 (population structure)
 Price et al. 2006 Nat Genet 38:904-9 (EIGENSTRAT stratification correction)
 
-NEW features of EIGENSOFT version 6.0.1 include:
+NEW features of EIGENSOFT version 6.0.2 include:
 -- Fixed Makefile and documentation to build eigenstrat properly
 -- Moved Tracy-Widom table into a header file for easier building
 
