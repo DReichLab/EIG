@@ -1,3 +1,5 @@
+DEBUG:=1
+
 CFLAGS += -I../include
 LDLIBS += -lgsl -lopenblas -lgfortran -lrt
 
@@ -50,6 +52,8 @@ convertf:	convertf.o mcio.o egsubs.o admutils.o h2d.o $(ED)/exclude.o $(NLIB)
 mergeit:	mergeit.o mcio.o admutils.o $(NLIB)
 
 pca:	pca.o $(ED)/eigsubs.o eigx.o $(NLIB)
+
+pcaselection:	pcaselection.o mcio.o admutils.o $(NLIB)
 
 $(ED)/pcatoy: 	$(ED)/pcatoy.o eigensrc/eigsubs.o eigensrc/eigx.o $(NLIB)
 

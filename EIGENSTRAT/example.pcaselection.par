@@ -1,0 +1,5 @@
+genotypename:  example.geno
+snpname:       example.snp
+indivname:     example.ind
+pcaname:       example.pca.evec
+outputname:    example.pcaselection.chisq
