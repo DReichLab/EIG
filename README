@@ -8,6 +8,7 @@ Galinsky et al. 2016 Am J Hum Genet (FastPCA and PC-based selection statistic)
 NEW features of EIGENSOFT version 6.1.1 include:
 -- Minor bug fix to correctly merge version 6.0.2 and version 6.1 changes.
 -- pcaselection operates on evec files. Added examples. 
+-- Backported twtable.c/h from EIGENSOFT 7alpha
 
 NEW features of EIGENSOFT version 6.1 include:
 -- The range finding step of PCA fastmode only scales the multiplied matrix,
