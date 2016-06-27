@@ -25,7 +25,7 @@ static double **gtable;
 
 void
 setgval (SNP ** xsnps, int nrows, Indiv ** indivmarkers, int numindivs,
-	 int *xindex, int *xtypes, int ncols)
+         int *xindex, int *xtypes, int ncols)
 {
 
   double *cc;
@@ -46,8 +46,8 @@ setgval (SNP ** xsnps, int nrows, Indiv ** indivmarkers, int numindivs,
     {
       if (xxindex[i] < xxindex[i - 1])
         {
-          fprintf(stderr, "xindex not sorted\n");
-          exit(1);
+          fprintf (stderr, "xindex not sorted\n");
+          exit (1);
         }
     }
 
@@ -70,16 +70,16 @@ setgval (SNP ** xsnps, int nrows, Indiv ** indivmarkers, int numindivs,
 
       mean = xmean[col] / xfancy[col];
       for (k = 0; k < 3; ++k)
-	{
-	  y = ((double) k) - mean;
-	  y *= xfancy[col];
-	  gtable[col][k] = y / sqrt (2.0);
-	}
+        {
+          y = ((double) k) - mean;
+          y *= xfancy[col];
+          gtable[col][k] = y / sqrt (2.0);
+        }
       gtable[col][3] = 0;
 
       t = MIN(n0, n1);
       if (t == 0)
-	cupt->ignore = YES;	// side-effect
+        cupt->ignore = YES;	// side-effect
     }
 
   free (cc);
@@ -184,15 +184,15 @@ kjg_geno_get_normalized_row (const size_t snp_index, double *y)
       const uint8_t* u = UL[p];  // unpacked data
 
       while (j < jf)
-	{
-	  size_t o = j % 4;      // offset in packed data
-	  size_t t = u[o];       // unpacked data
-	  y[i] = norm_lookup[t]; // normalized data
+        {
+          size_t o = j % 4;      // offset in packed data
+          size_t t = u[o];       // unpacked data
+          y[i] = norm_lookup[t]; // normalized data
 
-	  if (++i == xnrows)     // move onto next entry
-	    return;              // break if we are done with SNP
-	  j = xxindex[i];        // perform the lookup
-	}
+          if (++i == xnrows)     // move onto next entry
+            return;              // break if we are done with SNP
+          j = xxindex[i];        // perform the lookup
+        }
     }
 }
 

@@ -8,10 +8,8 @@ ifeq ($(PROFILING), 1)
 	CFLAGS += -pg # enable profiling
 endif
 
-TWTAB = '"../smarttables/twtable"'
-
 NLIB = libnick.a
-NLIBOBJS = gauss.o gds.o getpars.o linsubs.o sortit.o statsubs.o strsubs.o vsubs.o xsearch.o
+NLIBOBJS = gauss.o gds.o getpars.o linsubs.o sortit.o statsubs.o strsubs.o vsubs.o xsearch.o twtable.o
 
 .PHONY: all clean
 
@@ -23,5 +21,3 @@ clean:
 # ----- build nicksrc/libnick.a
 $(NLIB): $(NLIBOBJS)
 	ar -r $@ $^
-
-statsubs.o: CFLAGS += -DTWTAB=$(TWTAB)

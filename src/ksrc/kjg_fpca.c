@@ -15,7 +15,7 @@
 #include "kjg_fpca.h"
 #include "kjg_gsl.h"
 
-#include "admutils.h" 
+#include "admutils.h"
 #include "gval.h"
 
 size_t KJG_FPCA_ROWS = 256;
@@ -49,8 +49,8 @@ kjg_fpca (size_t K, size_t L, size_t I, double *eval, double *evec)
       // do the multiplication
       kjg_fpca_XTXA (G1, &Qi.matrix, G2);
 
-      // orthonormalize (Gram-Schmidt equivalent)
-      kjg_gsl_matrix_QR (G2);
+      // scale to prevent G2 from blowing up
+      gsl_matrix_scale (G2, 1.0 / m);
 
       Gswap = G2;
       G2 = G1;
@@ -60,15 +60,15 @@ kjg_fpca (size_t K, size_t L, size_t I, double *eval, double *evec)
   gsl_matrix_view Qi = gsl_matrix_submatrix (Q, 0, I * L, m, L);
   kjg_fpca_XA (G1, &Qi.matrix);
 
-  {
-    gsl_matrix *V = gsl_matrix_alloc (Q->size2, Q->size2);
-    gsl_vector *S = gsl_vector_alloc (Q->size2);
+    {
+      gsl_matrix *V = gsl_matrix_alloc (Q->size2, Q->size2);
+      gsl_vector *S = gsl_vector_alloc (Q->size2);
 
-    kjg_gsl_SVD (Q, V, S);
+      kjg_gsl_SVD (Q, V, S);
 
-    gsl_matrix_free (V);
-    gsl_vector_free (S);
-  }
+      gsl_matrix_free (V);
+      gsl_vector_free (S);
+    }
 
   // kjg_gsl_matrix_QR(Q); // QR decomposition is less accurate than SVD
 
@@ -107,7 +107,7 @@ kjg_fpca_XTXA (const gsl_matrix * A1, gsl_matrix * B, gsl_matrix * A2)
   size_t n = get_nrows ();
 
   size_t i, r;			// row index
-  double *Y = malloc (sizeof (double) * n * KJG_FPCA_ROWS);	// normalized
+  double *Y = malloc (sizeof(double) * n * KJG_FPCA_ROWS);	// normalized
 
   gsl_matrix_view Bi, Xi;
 
@@ -119,9 +119,9 @@ kjg_fpca_XTXA (const gsl_matrix * A1, gsl_matrix * B, gsl_matrix * A2)
       Xi = gsl_matrix_view_array (Y, r, n);
       Bi = gsl_matrix_submatrix (B, i, 0, r, B->size2);
       gsl_blas_dgemm (CblasNoTrans, CblasNoTrans, 1, &Xi.matrix, A1, 0,
-		      &Bi.matrix);
-      gsl_blas_dgemm (CblasTrans, CblasNoTrans, 1, &Xi.matrix, &Bi.matrix,
-		      1, A2);
+                      &Bi.matrix);
+      gsl_blas_dgemm (CblasTrans, CblasNoTrans, 1, &Xi.matrix, &Bi.matrix, 1,
+                      A2);
     }
 
   free (Y);
@@ -134,7 +134,7 @@ kjg_fpca_XA (const gsl_matrix * A, gsl_matrix * B)
   size_t m = get_ncols ();
 
   size_t i, r;
-  double *Y = malloc (sizeof (double) * n * KJG_FPCA_ROWS);
+  double *Y = malloc (sizeof(double) * n * KJG_FPCA_ROWS);
 
   gsl_matrix_view Hmat, Xmat;
 
@@ -146,7 +146,7 @@ kjg_fpca_XA (const gsl_matrix * A, gsl_matrix * B)
       Xmat = gsl_matrix_view_array (Y, r, n);
       Hmat = gsl_matrix_submatrix (B, i, 0, r, B->size2);
       gsl_blas_dgemm (CblasNoTrans, CblasNoTrans, 1, &Xmat.matrix, A, 0,
-		      &Hmat.matrix);
+                      &Hmat.matrix);
     }
 
   free (Y);
@@ -159,7 +159,7 @@ kjg_fpca_XTB (const gsl_matrix * B, gsl_matrix * A)
   size_t m = get_ncols ();
 
   size_t i, r;
-  double *Y = malloc (sizeof (double) * n * KJG_FPCA_ROWS);
+  double *Y = malloc (sizeof(double) * n * KJG_FPCA_ROWS);
   gsl_matrix_view Xmat;
 
   gsl_matrix_set_zero (A);
@@ -169,9 +169,9 @@ kjg_fpca_XTB (const gsl_matrix * B, gsl_matrix * A)
       r = kjg_geno_get_normalized_rows (i, KJG_FPCA_ROWS, Y);
       Xmat = gsl_matrix_view_array (Y, r, n);
       gsl_matrix_const_view Hmat = gsl_matrix_const_submatrix (B, i, 0, r,
-							       B->size2);
+                                                               B->size2);
       gsl_blas_dgemm (CblasTrans, CblasNoTrans, 1, &Xmat.matrix, &Hmat.matrix,
-		      1, A);
+                      1, A);
     }
 
   free (Y);

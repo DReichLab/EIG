@@ -18,10 +18,10 @@ kjg_gsl_matrix_fprintf (FILE * stream, gsl_matrix * m, const char *template)
     {
       fprintf (stream, template, gsl_matrix_get (m, i, 0));
       for (j = 1; j < m->size2; j++)
-	{
-	  fprintf (stream, "\t");
-	  fprintf (stream, template, gsl_matrix_get (m, i, j));
-	}
+        {
+          fprintf (stream, "\t");
+          fprintf (stream, template, gsl_matrix_get (m, i, j));
+        }
       fprintf (stream, "\n");
     }
 }
@@ -34,17 +34,16 @@ kjg_gsl_matrix_fscanf (FILE * stream, gsl_matrix * m)
   for (i = 0; i < m->size1; i++)
     {
       for (j = 0; j < m->size2; j++)
-	{
-	  fscanf (stream, "%lg", &x);
-	  gsl_matrix_set (m, i, j, x);
-	}
+        {
+          fscanf (stream, "%lg", &x);
+          gsl_matrix_set (m, i, j, x);
+        }
     }
 }
 
 void
-kjg_gsl_evec_fprintf (FILE * stream,
-		      gsl_vector * eval,
-		      gsl_matrix * evec, const char *template)
+kjg_gsl_evec_fprintf (FILE * stream, gsl_vector * eval, gsl_matrix * evec,
+                      const char *template)
 {
   size_t i, j;
   fprintf (stream, "#");
@@ -74,19 +73,19 @@ kjg_gsl_evec_fscanf (FILE * stream, gsl_vector * eval, gsl_matrix * evec)
     {
       r = fscanf (stream, "%lg", &x);
       if (r != 1)
-	return (r);
+        return (r);
       gsl_vector_set (eval, i, x);
     }
 
   for (i = 0; i < evec->size1; i++)
     {
       for (j = 0; j < evec->size2; j++)
-	{
-	  r = fscanf (stream, "%lg", &x);
-	  if (r != 1)
-	    return (r);
-	  gsl_matrix_set (evec, i, j, x);
-	}
+        {
+          r = fscanf (stream, "%lg", &x);
+          if (r != 1)
+            return (r);
+          gsl_matrix_set (evec, i, j, x);
+        }
     }
 
   return (0);
@@ -97,11 +96,11 @@ kjg_gsl_rng_init ()
 {
   const gsl_rng_type *T;
   gsl_rng *r;
-  extern long seed ;
+  extern long seed;
 
   gsl_rng_env_setup ();
 
-  gsl_rng_default_seed = seed ;
+  gsl_rng_default_seed = seed;
 
   T = gsl_rng_default;
   r = gsl_rng_alloc (T);
@@ -124,21 +123,21 @@ double
 kjg_gsl_dlange (const char norm, const gsl_matrix * m)
 {
   return (LAPACKE_dlange (LAPACK_ROW_MAJOR, norm, m->size1, m->size2, m->data,
-			  m->tda));
+                          m->tda));
 }
 
 int
 kjg_gsl_dgeqrf (gsl_matrix * m, gsl_vector * tau)
 {
-  return (LAPACKE_dgeqrf (LAPACK_ROW_MAJOR, m->size1, m->size2, m->data,
-			  m->tda, tau->data));
+  return (LAPACKE_dgeqrf (LAPACK_ROW_MAJOR, m->size1, m->size2, m->data, m->tda,
+                          tau->data));
 }
 
 int
 kjg_gsl_dorgqr (gsl_matrix * m, gsl_vector * tau)
 {
   return (LAPACKE_dorgqr (LAPACK_ROW_MAJOR, m->size2, m->size2, m->size2,
-			  m->data, m->tda, tau->data));
+                          m->data, m->tda, tau->data));
 }
 
 void
@@ -175,13 +174,13 @@ kjg_gsl_ran_ugaussian_matrix (const gsl_rng * r, gsl_matrix * m)
       data = gsl_matrix_ptr (m, i, 0);
 
       for (j = 0; j < m->size2 - 1; j += 2)
-	{
-	  kjg_gsl_ran_ugaussian_pair (r, data);
-	  data += 2;
-	}
+        {
+          kjg_gsl_ran_ugaussian_pair (r, data);
+          data += 2;
+        }
 
       if (m->size2 % 2)
-	*data = gsl_rng_uniform_pos (r);
+        *data = gsl_rng_uniform_pos (r);
     }
 }
 
@@ -198,12 +197,12 @@ int
 kjg_gsl_SVD (gsl_matrix * M, gsl_matrix * V, gsl_vector * S)
 {
   size_t big_enough = M->size1 + V->size2;
-  double *superb = malloc (big_enough * sizeof (double));
+  double *superb = malloc (big_enough * sizeof(double));
   double *U;
-  int info = LAPACKE_dgesvd (LAPACK_ROW_MAJOR,	// row major
-			     'O', 'S', M->size1, M->size2, M->data, M->tda,
-			     S->data, U,
-			     big_enough, V->data, V->tda, superb);
+  int info = LAPACKE_dgesvd (
+      LAPACK_ROW_MAJOR,	// row major
+      'O', 'S', M->size1, M->size2, M->data, M->tda, S->data, U, big_enough,
+      V->data, V->tda, superb);
   free (superb);
   return (info);
 }
