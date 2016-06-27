@@ -1242,7 +1242,7 @@ rtlchsq (int df, double z)
  Collected Algorithms for the CACM 1967 p. 243
  Updated for rounding errors based on remark in
  ACM TOMS June 1985, page 185
- Perlman.  No copyright
+ Perlman.
  */
 double
 pochisq (double x, int df)
@@ -1339,7 +1339,6 @@ critchi (int df, double p)
  Programmer:   Gary Perlman
  Organization: Wang Institute, Tyngsboro, MA 01879
  Tester:       compile with -DFTEST to include main program
- Copyright:    none
  Tabstops:     4
  */
 
