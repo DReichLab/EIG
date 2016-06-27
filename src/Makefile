@@ -1,5 +1,3 @@
-DEBUG:=1
-
 CFLAGS += -I../include
 LDLIBS += -lgsl -lopenblas -lgfortran -lrt
 
