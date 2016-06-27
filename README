@@ -86,14 +86,4 @@ EIGENSOFT was written by Nick Patterson, Alkes Price, Samuela Pollack,
 Kevin Galinsky, Chris Chang, and Sasha Gusev.
 
 We thank John Novembre and Mike Boursnell for code improvements, Matt Hanna 
-for the first implementation of multi-threading, and Angela Yu for a bugfix. 
-
-----------------------------
-SOFTWARE COPYRIGHT NOTICE AGREEMENT
-This software and its documentation are copyright (2010) by Harvard University 
-and The Broad Institute. All rights are reserved. This software is supplied 
-without any warranty or guaranteed support whatsoever. Neither Harvard 
-University nor The Broad Institute can be responsible for its use, misuse, or 
-functionality. The software may be freely copied for non-commercial purposes, 
-provided this copyright notice is retained.
-
+for the first implementation of multi-threading, and Angela Yu for a bugfix.
