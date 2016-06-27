@@ -1,9 +1,12 @@
-EIGENSOFT version 6.1.1, 5/22/16 (for Linux only)
+EIGENSOFT version 6.1.2, 6/27/16 (for Linux only)
 
 The EIGENSOFT package implements methods from the following 3 papers:
 Patterson et al. 2006 PLoS Genet (population structure)
 Price et al. 2006 Nat Genet (EIGENSTRAT stratification correction)
 Galinsky et al. 2016 Am J Hum Genet (FastPCA and PC-based selection statistic)
+
+NEW features of EIGENSOFT version 6.1.2 include:
+-- Updated license info to be GPL compliant required by linking the GSL
 
 NEW features of EIGENSOFT version 6.1.1 include:
 -- Minor bug fix to correctly merge version 6.0.2 and version 6.1 changes.
