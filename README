@@ -7,6 +7,7 @@ Galinsky et al. 2016 Am J Hum Genet (FastPCA and PC-based selection statistic)
 
 NEW features of EIGENSOFT version 6.1.3 include:
 -- Restored script file extensions to .perl instead of .pl
+-- Added updated ploteig script that disappeared from the repository
 
 NEW features of EIGENSOFT version 6.1.2 include:
 -- Updated license info to be GPL compliant required by linking the GSL
@@ -76,12 +77,14 @@ To remake the entire package:
 "make clobber"
 "make install"
 
-To remake EIG6.0 it is necessary to link to the OpenBLAS library. On orchestra, 
+To remake EIG6.x it is necessary to link to the OpenBLAS library. On orchestra, 
 the path is /opt/openblas and should work automatically. On Broad institute machines,
 the user should execute "use .openblas-0.2.8" and "use GCC-4.9" at the command 
 prompt before attempting to remake. All other users should install OpenBLAS and 
 set the variable OPENBLAS to the path at the make command line, 
 e.g. "make install OPENBLAS=/usr/local/openblas"
+
+The ploteig utility requires gnuplot to run.
 
 ----------------------------
 Acknowledgements:
