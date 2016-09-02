@@ -114,8 +114,8 @@ main (int argc, char **argv)
 
     {
       size_t i, j, k;
-      double *vg = (double *) malloc (k * sizeof(double));
-      double *v1 = (double *) malloc (k * sizeof(double));
+      double *vg = (double *) malloc (K * sizeof(double));
+      double *v1 = (double *) malloc (K * sizeof(double));
       for (i = 0; i < numsnps; i++)
         {
           N = 0;
