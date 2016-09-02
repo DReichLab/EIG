@@ -1,5 +1,5 @@
 CFLAGS += -I../include
-LDLIBS += -lgsl -lopenblas -lgfortran -lrt
+LDLIBS += -lgfortran -lrt -Wl,-Bstatic -lgsl -lopenblas -Wl,-Bdynamic -fopenmp
 
 ifeq ($(OPTIMIZE), 1)
 	CFLAGS += -O2
@@ -22,7 +22,7 @@ NLIB = $(ND)/libnick.a
 # ----- phony targets
 .PHONY: all clean clobber install
 
-EXE = baseprog convertf mergeit pca \
+EXE = baseprog convertf mergeit pca pcaselection \
 	$(ED)/pcatoy $(ED)/smartrel $(ED)/smarteigenstrat \
 	$(ED)/twstats $(ED)/eigenstrat $(ED)/eigenstratQTL $(ED)/smartpca
 
