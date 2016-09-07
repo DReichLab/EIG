@@ -1,4 +1,4 @@
-EIGENSOFT version 6.1.4, 9/2/16 (for Linux only)
+EIGENSOFT version 6.1.4, 9/7/16 (for Linux only)
 
 The EIGENSOFT package implements methods from the following 3 papers:
 Patterson et al. 2006 PLoS Genet (population structure)
@@ -7,8 +7,11 @@ Galinsky et al. 2016 Am J Hum Genet (FastPCA and PC-based selection statistic)
 
 NEW features of EIGENSOFT version 6.1.4 include:
 -- pcaselection was omitted from 6.1.3 by accident
--- statically linked GSL/openblas
--- fixed memory allocation bug in pcaselection
+-- Statically linked GSL/openblas
+-- Fixed memory allocation bug in pcaselection
+-- Some routines moved into nicklib
+-- Error message on allocate failure now prints length as "%ld"
+   supporting long values.
 
 NEW features of EIGENSOFT version 6.1.3 include:
 -- Restored script file extensions to .perl instead of .pl
