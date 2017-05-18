@@ -8,13 +8,11 @@
 /*  file name parameter : xregionname */
 /*  HW filter parameter : nhwfilter (-1 means no-filter) */
 /*  maximum number of regions : 1000
- closed intervals in physical position include endpoints */
+    closed intervals in physical position include endpoints */
 /*  read file and set ignore flag for SNPs */
-void
-excluderegions (char *xregionname, SNP **snps, int nsnps,
-                char *deletesnpoutname);
-void
-hwfilter (SNP **snps, int nsnps, int nindiv, double nhwfilter,
-          char *deletesnpoutname);
+void excluderegions (char *xregionname, SNP ** snps, int nsnps,
+		     char *deletesnpoutname);
+void hwfilter (SNP ** snps, int nsnps, int nindiv, double nhwfilter,
+	       char *deletesnpoutname);
 
 #endif

@@ -136,7 +136,7 @@ int mkfull(double *out, double *in, int n) ;
 
 /* storage allocation */
 int **initarray_2Dint(int numrows, int numcolumns, int initval);
-long **initarray_2Dlong(int numrows, int numcolumns, int initval);
+long **initarray_2Dlong(int numrows, int numcolumns, long initval);
 void free2Dint(int ***xx, int numrows) ;
 void free2Dlong(long ***xx, int numrows) ;
 double **initarray_2Ddouble(int numrows, int numcolumns, double initval);
@@ -150,6 +150,7 @@ void free_darray (double  **xx) ;
 void free_iarray (int  **xx)  ;          
 
 double bal1 (double *a, int n)  ;
+double bal2 (double *a, int n)  ;
 void vcompl(double *a, double *b, int n) ;
 void setidmat(double *a, int n) ; 
 
@@ -186,8 +187,10 @@ int ldekodeitbb(int *xx, long kode, int len, int *baselist) ;
 int kodeitbb(int *xx, int len, int *baselist)  ;
 int dekodeitbb(int *xx, int kode, int len, int *baselist) ;
 
+long expmod(long a, long b, long n) ;
 int isprime(long num) ;
 long nextprime(long num) ;
+
 int irevcomp (int xx, int stringlen) ;
 long lrevcomp (long xx, int stringlen) ;
 void ismatch(int *a, int *b, int n, int val) ;

@@ -1,4 +1,4 @@
-CFLAGS = -I../../include -I/opt/openblas/include
+CFLAGS += -I../../include -I/opt/openblas/include
 
 ifeq ($(DEBUG), 1)
 	CFLAGS += -g # enable debugging

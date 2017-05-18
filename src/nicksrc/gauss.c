@@ -1,31 +1,27 @@
-#include  "ranmath.h" 
+#include  "ranmath.h"
 
 double
 gauss ()
-
 {
 
-  /** 
-   Numer alg. in C pp 289 ff
-   */
+/** 
+ Numer alg. in C pp 289 ff
+*/
 
   static int iset = 0;
   static double gset;
   double v1, v2, rsq, fac;
 
-  if (iset == 1)
-    {
-      iset = 0;
-      return gset;
-    }
+  if (iset == 1) {
+    iset = 0;
+    return gset;
+  }
 
-  do
-    {
-      v1 = 2.0 * DRAND2() - 1.0;
-      v2 = 2.0 * DRAND2() - 1.0;
-      rsq = v1 * v1 + v2 * v2;
-    }
-  while (rsq >= 1.0 || rsq == 0.0);
+  do {
+    v1 = 2.0 * DRAND2 () - 1.0;
+    v2 = 2.0 * DRAND2 () - 1.0;
+    rsq = v1 * v1 + v2 * v2;
+  } while (rsq >= 1.0 || rsq == 0.0);
 
   fac = sqrt (-2.0 * log (rsq) / rsq);
   gset = v1 * fac;

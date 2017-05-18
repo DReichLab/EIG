@@ -1,10 +1,10 @@
 #include <stdio.h>
 
 #include <limits.h>
-#include <math.h>  
-#include <nicklib.h> 
-#include "admutils.h"  
-#include "eigsubs.h" 
+#include <math.h>
+#include <nicklib.h>
+#include "admutils.h"
+#include "eigsubs.h"
 
 /* ********************************************************************* */
 
@@ -16,18 +16,13 @@ int nval = -1;
 int numsamp = 100;
 double mul1 = 1.0;
 
-double
-xxlike (int m, double a, double var, double logsum, double lsum);
-double
-xxlikex (int m, double a, double logsum, double lsum);
-double
-xxliked (int m, double a, double logsum, double lsum);
-double
-xxliked2 (int m, double a, double logsum, double lsum);
-double
-oldtwestxx (double *lam, int m, double *pzn, double *pzvar);
-double
-doeig2 (double *vals, int m, double *pzn, double *ptw);
+
+double xxlike (int m, double a, double var, double logsum, double lsum);
+double xxlikex (int m, double a, double logsum, double lsum);
+double xxliked (int m, double a, double logsum, double lsum);
+double xxliked2 (int m, double a, double logsum, double lsum);
+double oldtwestxx (double *lam, int m, double *pzn, double *pzvar);
+double doeig2 (double *vals, int m, double *pzn, double *ptw);
 
 double
 twestxx (double *lam, int m, double *pzn, double *pzvar)
@@ -43,6 +38,7 @@ twestxx (double *lam, int m, double *pzn, double *pzvar)
   return tw;
 
 }
+
 double
 oldtwestxx (double *lam, int m, double *pzn, double *pzvar)
 {
@@ -52,7 +48,8 @@ oldtwestxx (double *lam, int m, double *pzn, double *pzvar)
   double ylike, ybase, y, ylmax, ynmax, yld, yld2, ainc, ym;
   int k;
 
-  ZALLOC(ww, m, double);
+
+  ZALLOC (ww, m, double);
   copyarr (lam, ww, m);
   lsum = asum (ww, m);
   vlog (ww, ww, m);
@@ -62,33 +59,31 @@ oldtwestxx (double *lam, int m, double *pzn, double *pzvar)
   yn = (double) m;
   ybase = xxlikex (m, yn, logsum, lsum);
 
-  for (k = 1; k <= 100; ++k)
-    {
-      a = yn / 2.0;
-      ylike = xxlikex (m, a, logsum, lsum);
-      yld = xxliked (m, a, logsum, lsum);
-      ylike -= ybase;
-      if (verbose)
-        printf ("ynloop %12.3f %12.3f %12.3f\n", yn / (double) m, ylike, yld);
-      if (ylike < ylmax)
-        break;
-      ylmax = ylike;
-      ynmax = yn;
-      yn *= 1.1;
-    }
+  for (k = 1; k <= 100; ++k) {
+    a = yn / 2.0;
+    ylike = xxlikex (m, a, logsum, lsum);
+    yld = xxliked (m, a, logsum, lsum);
+    ylike -= ybase;
+    if (verbose)
+      printf ("ynloop %12.3f %12.3f %12.3f\n", yn / (double) m, ylike, yld);
+    if (ylike < ylmax)
+      break;
+    ylmax = ylike;
+    ynmax = yn;
+    yn *= 1.1;
+  }
   a = ynmax / 2.0;
-  for (k = 1; k <= 10; ++k)
-    {
+  for (k = 1; k <= 10; ++k) {
 // newton iteration
-      ylike = xxlikex (m, a, logsum, lsum);
-      yld = xxliked (m, a, logsum, lsum);
-      yld2 = xxliked2 (m, a, logsum, lsum);
-      ylike -= ybase;
-      ainc = -yld / yld2;
-      a += ainc;
-      if (verbose)
-        printf ("newton: %3d  %15.9f  %15.9f  %15.9f\n", k, ylike, yld, ainc);
-    }
+    ylike = xxlikex (m, a, logsum, lsum);
+    yld = xxliked (m, a, logsum, lsum);
+    yld2 = xxliked2 (m, a, logsum, lsum);
+    ylike -= ybase;
+    ainc = -yld / yld2;
+    a += ainc;
+    if (verbose)
+      printf ("newton: %3d  %15.9f  %15.9f  %15.9f\n", k, ylike, yld, ainc);
+  }
   fflush (stdout);
   yn = 2.0 * a;
   ym = (double) m;
@@ -100,6 +95,7 @@ oldtwestxx (double *lam, int m, double *pzn, double *pzvar)
   free (ww);
   return 0;
 }
+
 double
 xxlike (int m, double a, double var, double logsum, double lsum)
 {
@@ -111,11 +107,10 @@ xxlike (int m, double a, double var, double logsum, double lsum)
   ym = (double) m;
 
   yl = -ym * a * log (2.0);
-  for (j = 1; j <= m; ++j)
-    {
-      x = a - 0.5 * (double) (m - j);
-      yl -= lgamma (x);
-    }
+  for (j = 1; j <= m; ++j) {
+    x = a - 0.5 * (double) (m - j);
+    yl -= lgamma (x);
+  }
 // so far this is log (C_L)    normalizing constant
   yl -= ym * a * log (var);
   yl += (a - p) * logsum;
@@ -124,6 +119,7 @@ xxlike (int m, double a, double var, double logsum, double lsum)
   return yl;
 
 }
+
 double
 xxlikex (int m, double a, double logsum, double lsum)
 {
@@ -136,20 +132,21 @@ xxlikex (int m, double a, double logsum, double lsum)
   lco = lsum / (2.0 * ym);
   var = lco / a;
 
+
   yl = -ym * a * log (2.0);
-  for (j = 1; j <= m; ++j)
-    {
-      x = a - 0.5 * (double) (m - j);
-      yl -= lgamma (x);
-    }
+  for (j = 1; j <= m; ++j) {
+    x = a - 0.5 * (double) (m - j);
+    yl -= lgamma (x);
+  }
 // so far this is log (C_L)    normalizing constant
   yl -= ym * a * log (var);
   yl += (a - p) * logsum;
-  yl -= ym * a;  // plugging in var 
+  yl -= ym * a;                 // plugging in var 
 
   return yl;
 
 }
+
 double
 xxliked (int m, double a, double logsum, double lsum)
 // first deriv wrt a
@@ -163,23 +160,24 @@ xxliked (int m, double a, double logsum, double lsum)
   var = lsum / (2.0 * a * ym);
   vard = -var / a;
 
+
   yl = -ym * log (2.0);
-  for (j = 1; j <= m; ++j)
-    {
-      x = a - 0.5 * (double) (m - j);
-      if (x < 0.0)
-        return 100.0;
-      yl -= psi (x);
-    }
+  for (j = 1; j <= m; ++j) {
+    x = a - 0.5 * (double) (m - j);
+    if (x < 0.0)
+      return 100.0;
+    yl -= psi (x);
+  }
 // so far this is log (C_L)    normalizing constant
   yl -= ym * log (var);
   yl -= (ym * a / var) * vard;
   yl += logsum;
-  yl -= ym;  // plugging in var 
+  yl -= ym;                     // plugging in var 
 
   return yl;
 
 }
+
 double
 xxliked2 (int m, double a, double logsum, double lsum)
 // second deriv wrt a
@@ -194,14 +192,14 @@ xxliked2 (int m, double a, double logsum, double lsum)
   vard = -var / a;
   vard2 = 2.0 * var / (a * a);
 
+
   yl = 0.0;
-  for (j = 1; j <= m; ++j)
-    {
-      x = a - 0.5 * (double) (m - j);
-      if (x < 0.0)
-        return 100.0;
-      yl -= tau (x);
-    }
+  for (j = 1; j <= m; ++j) {
+    x = a - 0.5 * (double) (m - j);
+    if (x < 0.0)
+      return 100.0;
+    yl -= tau (x);
+  }
 // so far this is log (C_L)    normalizing constant
   yl -= 2.0 * (ym / var) * vard;
   yl -= (ym * a / var) * vard2;
@@ -211,6 +209,7 @@ xxliked2 (int m, double a, double logsum, double lsum)
   return yl;
 
 }
+
 double
 doeig2 (double *vals, int m, double *pzn, double *ptw)
 {
@@ -220,7 +219,7 @@ doeig2 (double *vals, int m, double *pzn, double *ptw)
   double *evals;
 
   ++ncall;
-  ZALLOC(evals, m, double);
+  ZALLOC (evals, m, double);
   copyarr (vals, evals, m);
   y = (double) m / asum (evals, m);
   vst (evals, evals, y, m);
@@ -235,6 +234,7 @@ doeig2 (double *vals, int m, double *pzn, double *ptw)
   *ptw = tw;
   return tail;
 }
+
 double
 rhoinv (double x, double gam)
 // Lee et al. page 5 for \rho^{-1} 
@@ -251,4 +251,3 @@ rhoinv (double x, double gam)
   return 0.5 * y1;
 
 }
-

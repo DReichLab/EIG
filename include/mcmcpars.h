@@ -1,6 +1,7 @@
-double thp1 = 1.0, thp2 = 5.0; /* params for theta */
-double thxp1 = 1.0, thxp2 = 10.0; /* params for theta X  */
-double thxp0 = 40; /* cross term */
+
+double thp1 = 1.0, thp2 = 5.0;	/* params for theta */
+double thxp1 = 1.0, thxp2 = 10.0;	/* params for theta X  */
+double thxp0 = 40;		/* cross term */
 /* -1 is default value (=0 logically)  */
 
 double lp1 = 10.2, lp2 = 2;
@@ -28,10 +29,9 @@ int alkesmode = NO;
 int malexhet = NO;
 int familynames = YES;
 
-int decim = 0, dmindis = 200000, dmaxdis = 500000; // decimation parameters
+int decim = 0, dmindis = 200000, dmaxdis = 500000;	// decimation parameters
 int hashcheck = YES;
 int outputall = NO;
 int sevencolumnped = NO;
 
 FILE *fstdetails = NULL;
-

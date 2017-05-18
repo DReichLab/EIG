@@ -9,7 +9,7 @@ This file contains documentation of population structure programs:
   smartpca: run Principal Components Analysis on input genotype data.
   ploteig: construct plot of top 2 principal components
   twstats: compute number of statistically significant principal components.
-  evec2pca.pl: convert eigenvector file to format needed for EIGENSTRAT  
+  evec2pca.perl: convert eigenvector file to format needed for EIGENSTRAT  
   smartrel: identify related samples, accounting for population structure
 
 ------------------------------------------------------------------------
@@ -149,6 +149,19 @@ qtmode: If set to YES, assume that there is a single population and that the
   The default value for this parameter is NO.
 fstonly: If set to YES, then skip PCA and just calculate FST values.  
   The default value for this parameter is NO.
+fstdetailsname:  mybig.out 
+ Outputs details for fst including estimates for each SNP 
+
+*** fst options: 
+inbreed: YES  (default NO) 
+ Set if pseudo-diploids present (most aDNA data, or there is inbreeding such as first cousin marriages, 
+  in the data.  Requires at leasr 2 samples/population. 
+  The mathematics are described in Reich et al: Reconstructing Indian population history (Nature, 2009).  Section 1.1 of Appendix
+fsthiprecision:  YES (default NO) 
+  Prints 6 decimal places of fst estimates
+fstz:  YES (default NO)    *** NEW *** 
+  Lower triangle of fst output are Z-scores (against NULL fst=0) 
+ 
 killr2: If set to YES, then eliminate SNPs in LD with nearby SNPs.  
   The default value for this parameter is NO.
 r2thresh: If killr2 is set to YES, then pairs of SNPs that have r-squared 
@@ -209,7 +222,6 @@ projection step.  This is approriate if PCs are calculated using samples with li
 but it is desired to project samples with much missing data onto the top PCs. 
 See ./lsqproject.pdf for a more detailed description.
 
-(NEW)
 fastmode: YES
 Fast pca approximation is used.  See Galinsky 2014 ASHG talk.  In fastmode,
 there is no outlier removal, no Tracy-Widom significance testing,
@@ -223,11 +235,32 @@ In fastmode most options are not supported.
  No fst calculations. Consider rerunning with fstonly:  YES if this is wanted.
  No lsqproject: YES
 
-(NEW) Multithreading (Code added by Chris Chang)
+Multithreading (Code added by Chris Chang)
 smartpca now supports multithreading but NOT with fastmode: YES
 By default a (hopefully) system dependent number of threads is chosen.
 This can be overwritten by (for example)
 numthreads:   10
+
+(NEW) 
+shrinkmode: YES  (default NO) 
+A problem with smartpca is that samples used to calculate the PC axes 
+"stretch" the axes.  So that 2 populations in fact genetically identical 
+(2 independent samples from the same underlying population) will appear different 
+if one is used to compute axes, and one not.  shrinkmode: YES is an attempt 
+to solve this problem.  Details to appear later, but this has been used successfully 
+in the Reich lab.
+*** warning *** shrinkmode is slow and will greatly increase the runtime. 
+
+Alternate shrink option.  
+ We implemented a new method (Liu, Dobriban, Singer: https://arxiv.org/pdf/1611.05550.pdf) ) of eigenvalue shrinkage 
+autoshrink: YES  (default NO) 
+This costs little in CPU, but the results seem slightly worse than shrinkmode: YES.  
+*** Caveat.  This is my implementation of Liu et al.  Errors are mine not theirs NJP  *** 
+Sample runs and output of shrinkage can be found on 
+[https://reich.hms.harvard.edu/sites/reich.hms.harvard.edu/files/inline-files/shrinkdemo.tar.gz] 
+
+
+
 
 ------------------------------------------------------------------------
 
@@ -290,17 +323,17 @@ Example: see ./twexample.perl
 
 -----------------------------------------------------------------------
 
-DOCUMENTATION OF evec2pca.pl program:
+DOCUMENTATION OF evec2pca.perl program:
 
-The evec2pca.pl program is for users who want to run the EIGENSTRAT
+The evec2pca.perl program is for users who want to run the EIGENSTRAT
 stratification correction method on on output produced by the smartpca program.
 It converts the .evec file produced by smartpca to the .pca file needed by 
-EIGENSTRAT.  However, if using the smartpca.pl wrapper, evec2pca.pl is 
-called automatically so there is no need to separately run evec2pca.pl.
-See ../EIGENSTRAT/README for details on the smartpca.pl wrapper.
+EIGENSTRAT.  However, if using the smartpca.perl wrapper, evec2pca.perl is 
+called automatically so there is no need to separately run evec2pca.perl.
+See ../EIGENSTRAT/README for details on the smartpca.perl wrapper.
 
-The syntax of evec2pca.pl is
-../bin/evec2pca.pl k example.evec example.ind example.pca, where
+The syntax of evec2pca.perl is
+../bin/evec2pca.perl k example.evec example.ind example.pca, where
 k is the number of principal components in example.evec file (e.g. 10)
 example.evec is file of principal components produced by smartpca
 example.ind is individual file
@@ -341,7 +374,7 @@ relthresh:    threshhold for correlation coefficients.  Only coefficients
 
 ------------------------------------------------------------------------------
 Questions?
-See https://www.hsph.harvard.edu/alkes-price/eigensoft-frequently-asked-questions/
+See http://www.hsph.harvard.edu/faculty/alkes-price/files/eigensoftfaq.htm
 or email Samuela Pollack, spollack@hsph.harvard.edu
 
 SOFTWARE COPYRIGHT NOTICE AGREEMENT

@@ -1,43 +1,15 @@
-EIGENSOFT version 6.1.4, 9/7/16 (for Linux only)
+## shrinkmode added.  3/15
+EIGENSOFT version 7.2.0, 04/30/17 (for Linux only)
 
-The EIGENSOFT package implements methods from the following 3 papers:
-Patterson et al. 2006 PLoS Genet (population structure)
-Price et al. 2006 Nat Genet (EIGENSTRAT stratification correction)
-Galinsky et al. 2016 Am J Hum Genet (FastPCA and PC-based selection statistic)
-
-NEW features of EIGENSOFT version 6.1.4 include:
--- pcaselection was omitted from 6.1.3 by accident
--- Statically linked GSL/openblas
--- Fixed memory allocation bug in pcaselection
--- Some routines moved into nicklib
--- Error message on allocate failure now prints length as "%ld"
-   supporting long values.
-
-NEW features of EIGENSOFT version 6.1.3 include:
--- Restored script file extensions to .perl instead of .pl
--- Added updated ploteig script that disappeared from the repository
-
-NEW features of EIGENSOFT version 6.1.2 include:
--- Updated license info to be GPL compliant required by linking the GSL
-
-NEW features of EIGENSOFT version 6.1.1 include:
--- Minor bug fix to correctly merge version 6.0.2 and version 6.1 changes.
--- pcaselection operates on evec files. Added examples. 
--- Backported twtable.c/h from EIGENSOFT 7alpha
-
-NEW features of EIGENSOFT version 6.1 include:
--- The range finding step of PCA fastmode only scales the multiplied matrix,
-   as orthogonalization is unnecessary. This appears to improve accuracy. 
-
-NEW features of EIGENSOFT version 6.0.2 include:
--- Fixed Makefile and documentation to build eigenstrat properly
--- Moved Tracy-Widom table into a header file for easier building
+The EIGENSOFT package implements methods from the following 2 papers:
+Patterson et al. 2006 PLoS Genet 2:e190 (population structure)
+Price et al. 2006 Nat Genet 38:904-9 (EIGENSTRAT stratification correction)
 
 NEW features of EIGENSOFT version 6.0.1 include:
 -- Minor bug fix which prevents smartpca from trying to print out eigenvalues
   if fastmode is set.
 
-NEW features of EIGENSOFT version 6.0beta included:
+NEW features of EIGENSOFT version 6.0.0beta included:
 -- New option fastmode which implements a very fast pca approximation.
    See POPGEN/README and Galinsky 2014 ASHG talk.
 -- Changes to external packages required.  EIGENSOFT version 5.0.2 required
@@ -52,8 +24,8 @@ See POPGEN/README for documentation of population structure programs.
 See EIGENSTRAT/README for documentation of EIGENSTRAT programs.
 
 Questions?
-See https://www.hsph.harvard.edu/alkes-price/eigensoft-frequently-asked-questions/
-or email Samuela Pollack, spollack@hsph.harvard.edu
+See http://www.hsph.harvard.edu/faculty/alkes-price/files/eigensoftfaq.htm
+or email Matthew Mah <matthew_mah@hms.harvard.edu>
 
 Executables and source code:
 ----------------------------
@@ -63,11 +35,23 @@ We have placed source code for all C executables in the src/ directory,
 for users who wish to modify and recompile our programs.  For example, to
 recompile the eigenstrat program, type
 "cd src"
-"make eigensrc/eigenstrat"      
-"mv eigensrc/eigenstrat ../bin"
+"make eigenstrat"      
+"mv eigenstrat ../bin"
 
 Note that some of our software will only compile if your system has the
 GSL + lapack + OpenBLAS packages installed.
+
+On Mac OSX, you can install gsl and OpenBLAS with lapack using homebrew:
+"brew install gsl"
+"brew install homebrew/science/openblas"
+
+If these packages are not in standard directories, you can specify the 
+appropriate include and library directories with the CFLAGS and LDLIBS 
+make variables. 
+For example, on the Harvard Medical School O2 cluster, the command is:
+'make CFLAGS="-I/n/app/openblas/0.2.19/include -I/n/app/gsl/2.3/include" LDLIBS="-L/n/app/openblas/0.2.19/lib -L/n/app/gsl/2.3/lib/"'
+On Mac OSX:
+'make CFLAGS="-I/usr/local/opt/openblas/include -I/usr/local/opt/gsl/include" LDFLAGS="-L/usr/local/opt/openblas/lib -L/usr/local/opt/gsl/lib"'
 
 If you have trouble compiling and running our code, try compiling and
 running the pcatoy program in the src directory:
@@ -85,14 +69,12 @@ To remake the entire package:
 "make clobber"
 "make install"
 
-To remake EIG6.x it is necessary to link to the OpenBLAS library. On orchestra, 
+To remake EIG7.2 it is necessary to link to the OpenBLAS library. On orchestra, 
 the path is /opt/openblas and should work automatically. On Broad institute machines,
 the user should execute "use .openblas-0.2.8" and "use GCC-4.9" at the command 
 prompt before attempting to remake. All other users should install OpenBLAS and 
 set the variable OPENBLAS to the path at the make command line, 
 e.g. "make install OPENBLAS=/usr/local/openblas"
-
-The ploteig utility requires gnuplot to run.
 
 ----------------------------
 Acknowledgements:
@@ -100,4 +82,14 @@ EIGENSOFT was written by Nick Patterson, Alkes Price, Samuela Pollack,
 Kevin Galinsky, Chris Chang, and Sasha Gusev.
 
 We thank John Novembre and Mike Boursnell for code improvements, Matt Hanna 
-for the first implementation of multi-threading, and Angela Yu for a bugfix.
+for the first implementation of multi-threading, and Angela Yu for a bugfix. 
+
+----------------------------
+SOFTWARE COPYRIGHT NOTICE AGREEMENT
+This software and its documentation are copyright (2010) by Harvard University 
+and The Broad Institute. All rights are reserved. This software is supplied 
+without any warranty or guaranteed support whatsoever. Neither Harvard 
+University nor The Broad Institute can be responsible for its use, misuse, or 
+functionality. The software may be freely copied for non-commercial purposes, 
+provided this copyright notice is retained.
+

@@ -32,7 +32,8 @@
  Code added to support grm output + improved ld rregression by Alexander Gusev 
 */
 
-#define WVERSION   "13050"
+#define WVERSION   "13500"
+
 /** 
 Simple eigenvector analysis
 Options to look at groups (simple ANOVA)
@@ -117,13 +118,25 @@ id2pops added
 Threading added Chris Chang) 
 fastmode (Kevin Galinski) 
 bugfix to ldregx (Angela Yu)
+shrinkmode (see doshrinkp) 
 */
 
+#if _WIN32
+// just in case we try a Windows port in the future
+#include <windows.h>
+#include <process.h>
+#define pthread_t HANDLE
+#define THREAD_RET_TYPE unsigned __stdcall
+#define THREAD_RETURN return 0
+#define MAX_THREADS 63
+#define MAX_THREADS_P1 64
+#else
 #include <pthread.h>
 #define THREAD_RET_TYPE void*
 #define THREAD_RETURN return NULL
 #define MAX_THREADS 127
 #define MAX_THREADS_P1 128
+#endif
 
 #define MAXFL  50
 #define MAXSTR  512
@@ -137,25 +150,25 @@ Indiv **indivmarkers;
 SNP **snpmarkers;
 
 int numsnps, numindivs;
-int numeigs = 10;		/// default
+int numeigs = 10;               /// default
 int markerscore = NO;
 int maxpops = 100;
-int seed = 0;
-int chisqmode = NO;		// approx p-value better to use F-stat
+long seed = 0;
+int chisqmode = NO;             // approx p-value better to use F-stat
 int missingmode = NO;
 int shrinkmode = NO;
 int dotpopsmode = YES;
-int noxdata = YES;		/* default as pop structure dubious if Males and females */
+int noxdata = YES;              /* default as pop structure dubious if Males and females */
 int fstonly = NO;
 int pcorrmode = NO;
 int pcpopsonly = YES;
 int nostatslim = 10;
 int znval = -1;
 int popsizelimit = -1;
-int altnormstyle = YES;		// affects subtle details in normalization formula
+int altnormstyle = YES;         // affects subtle details in normalization formula
 int minallelecnt = 1;
 int maxmissing = 9999999;
-int lopos = -999999999, hipos = 999999999;	// use with xchrom
+int lopos = -999999999, hipos = 999999999;      // use with xchrom
 
 int packout = -1;
 extern enum outputmodetype outputmode;
@@ -166,7 +179,7 @@ extern int fancynorm;
 extern int verbose;
 int ogmode = NO;
 int fsthiprec = NO;
-int inbreed = NO;		// for fst
+int inbreed = NO;               // for fst
 int easymode = NO;
 int fastmode = NO;
 int fastdim = -1;
@@ -193,7 +206,7 @@ char *indivname = NULL;
 char *badsnpname = NULL;
 char *deletesnpoutname = NULL;
 char *poplistname = NULL;
-char *xregionname = NULL;	/* physical positions of SNPs to exclude */
+char *xregionname = NULL;       /* physical positions of SNPs to exclude */
 char *outliername = NULL;
 char *phylipname = NULL;
 char *snpeigname = NULL;
@@ -204,34 +217,36 @@ char *genooutfilename = NULL;
 char *omode = "packedancestrymap";
 char *grmoutname = NULL;
 int grmbinary = NO;
-double blgsize = 0.05;		// block size in Morgans */
+double blgsize = 0.05;          // block size in Morgans */
 char *id2pops = NULL;
 
 double r2thresh = -1.0;
-double r2genlim = 0.01;		// Morgans 
+double r2genlim = 0.01;         // Morgans 
 double r2physlim = 5.0e6;
 int killr2 = NO;
-int pubmean = YES;		// change default
+int pubmean = YES;              // change default
 
 double nhwfilter = -1.0;
+
+double *xmean, *xfancy;
 
 int thread_ct_config = 0;
 
 int randomfillin = NO;
-int usepopsformissing = NO;	// if YES popmean is used for missing.  Overall mean if all missing for pop
+int usepopsformissing = NO;     // if YES popmean is used for missing.  Overall mean if all missing for pop
 
 int xchrom = -1;
 // list of outliers
 
 int ldregress = 0;
-double ldlimit = 9999.0;	/* default is infinity */
+double ldlimit = 9999.0;        /* default is infinity */
 double ldr2lo = 0.01;
 double ldr2hi = 0.95;
 int ldposlimit = 1000 * 1000 * 1000;
 int ldregx (double *gsource, double *gtarget, double *res, int rsize,
-	    int n, double r2lo, double r2hi);
+            int n, double r2lo, double r2hi);
 void bumpldvv (double *gsource, double *newsource, int *pnumld, int maxld,
-	       int n, int *ldsnpbuff, int newsnpnum);
+               int n, int *ldsnpbuff, int newsnpnum);
 
 
 char *outputname = NULL;
@@ -245,33 +260,33 @@ double rhoinv (double x, double gam);
 
 void readcommands (int argc, char **argv);
 int loadindx (Indiv ** xindlist, int *xindex, Indiv ** indivmarkers,
-	      int numindivs);
+              int numindivs);
 void loadxdataind (double *xrow, SNP ** snplist, int ind, int ncols);
 void fixxrow (double *xrow, double *xmean, double *xfancy, int len);
 void dofancy (double *cc, int n, double *fancy);
 int fvadjust (double *rr, int n, double *pmean, double *fancy);
 void getcol (double *cc, double *xdata, int col, int nrows, int ncols);
 void getcolxf (double *xcol, SNP * cupt, int *xindex,
-	       int nrows, int col, double *xmean, double *xfancy);
+               int nrows, int col, double *xmean, double *xfancy);
 int getcolxz (double *xcol, SNP * cupt, int *xindex, int *xtypes,
-	      int nrows, int col, double *xmean, double *xfancy, int *n0,
-	      int *n1);
+              int nrows, int col, double *xmean, double *xfancy, int *n0,
+              int *n1);
 int getcolxz_binary1 (int *rawcol, double *xcol, SNP * cupt, int *xindex,
-		      int nrows, int col, double *xmean, double *xfancy,
-		      int *n0, int *n1);
+                      int nrows, int col, double *xmean, double *xfancy,
+                      int *n0, int *n1);
 void getcolxz_binary2 (int *rawcol, uintptr_t * binary_cols,
-		       uintptr_t * binary_mmask, uint32_t xblock,
-		       uint32_t nrows);
+                       uintptr_t * binary_mmask, uint32_t xblock,
+                       uint32_t nrows);
 
 void doinbxx (double *inbans, double *inbsd, SNP ** xsnplist, int *xindex,
-	      int *xtypes, int nrows, int ncols, int numeg, double blgsize,
-	      SNP ** snpmarkers, Indiv ** indm);
+              int *xtypes, int nrows, int ncols, int numeg, double blgsize,
+              SNP ** snpmarkers, Indiv ** indm);
 
 void putcol (double *cc, double *xdata, int col, int nrows, int ncols);
 void calcpopmean (double *wmean, char **elist, double *vec,
-		  char **eglist, int numeg, int *xtypes, int len);
+                  char **eglist, int numeg, int *xtypes, int len);
 double dottest (char *sss, double *vec, char **eglist, int numeg, int *xtypes,
-		int len);
+                int len);
 double yll (double x1, double x2, double xlen);
 void calcmean (double *wmean, double *vec, int len, int *xtypes, int numeg);
 double anova1 (double *vec, int len, int *xtypes, int numeg);
@@ -288,41 +303,44 @@ void printdiag (double *a, int n);
 
 int
 ridoutlier (double *evecs, int n, int neigs,
-	    double thresh, int *badlist, OUTLINFO ** outinfo);
+            double thresh, int *badlist, OUTLINFO ** outinfo);
 
 void addoutersym (double *X, double *v, int n);
 void symit (double *X, int n);
 
 double fstcol (double *estn, double *estd, SNP * cupt,
-	       int *xindex, int *xtypes, int nrows, int type1, int type2);
+               int *xindex, int *xtypes, int nrows, int type1, int type2);
 
 double oldfstcol (double *estn, double *estd, SNP * cupt,
-		  int *xindex, int *xtypes, int nrows, int type1, int type2);
+                  int *xindex, int *xtypes, int nrows, int type1, int type2);
 
 void jackrat (double *xmean, double *xsd, double *top, double *bot, int len);
 void domult_increment_lookup (pthread_t * threads, uint32_t thread_ct,
-			      double *XTX_lower_tri, double *tblock,
-			      uintptr_t * binary_cols,
-			      uintptr_t * binary_mmask, uint32_t block_size,
-			      uint32_t indiv_ct,
-			      double *partial_sum_lookup_buf);
+                              double *XTX_lower_tri, double *tblock,
+                              uintptr_t * binary_cols,
+                              uintptr_t * binary_mmask, uint32_t block_size,
+                              uint32_t indiv_ct,
+                              double *partial_sum_lookup_buf);
 void domult_increment_normal (pthread_t * threads, uint32_t thread_ct,
-			      double *XTX_lower_tri, double *tblock,
-			      int marker_ct, uint32_t indiv_ct);
+                              double *XTX_lower_tri, double *tblock,
+                              int marker_ct, uint32_t indiv_ct);
 void writesnpeigs (char *snpeigname, SNP ** xsnplist, double *ffvecs,
-		   int numeigs, int ncols);
+                   int numeigs, int ncols);
 void dofstxx (double *fstans, double *fstsd, SNP ** xsnplist, int *xindex,
-	      int *xtypes, int nrows, int ncols, int numeg, double blgsize,
-	      SNP ** snpmarkers, Indiv ** indm);
+              int *xtypes, int nrows, int ncols, int numeg, double blgsize,
+              SNP ** snpmarkers, Indiv ** indm);
 void fixwt (SNP ** snpm, int nsnp, double val);
 void sqz (double *azq, double *acoeffs, int numeigs, int nrows, int *xindex);
 void dumpgrm (double *XTX, int *xindex, int nrows, int numsnps,
-	      Indiv ** indivmarkers, int numindivs, char *grmoutname);
+              Indiv ** indivmarkers, int numindivs, char *grmoutname);
 
 void printevecs (SNP ** snpmarkers, Indiv ** indivmarkers, Indiv ** xindlist,
-		 int numindivs, int ncols, int nrows,
-		 int numeigs, double *eigenvecs, double *eigenvals,
-		 FILE * ofile);
+                 int numindivs, int ncols, int nrows,
+                 int numeigs, double *eigenvecs, double *eigenvals,
+                 FILE * ofile);
+
+void doshrink (double *mmat, int m, int n, int *xindex, SNP ** xsnplist);
+void doshrinkp (double *mmat, int m, int n, int *xindex, SNP ** xsnplist);
 
 uint32_t
 triangle_divide (int64_t cur_prod, int32_t modif)
@@ -352,8 +370,8 @@ triangle_divide (int64_t cur_prod, int32_t modif)
 
 void
 parallel_bounds (uint32_t ct, int32_t start, uint32_t parallel_idx,
-		 uint32_t parallel_tot, int32_t * bound_start_ptr,
-		 int32_t * bound_end_ptr)
+                 uint32_t parallel_tot, int32_t * bound_start_ptr,
+                 int32_t * bound_end_ptr)
 {
   int32_t modif = 1 - start * 2;
   int64_t ct_tot = ((int64_t) ct) * (ct + modif);
@@ -366,8 +384,8 @@ parallel_bounds (uint32_t ct, int32_t start, uint32_t parallel_idx,
 // set align to 1 for no alignment
 void
 triangle_fill (uint32_t * target_arr, uint32_t ct, uint32_t pieces,
-	       uint32_t parallel_idx, uint32_t parallel_tot, uint32_t start,
-	       uint32_t align)
+               uint32_t parallel_idx, uint32_t parallel_tot, uint32_t start,
+               uint32_t align)
 {
   int32_t modif = 1 - start * 2;
   uint32_t cur_piece = 1;
@@ -420,7 +438,7 @@ symit2 (double *XTX, uintptr_t nrows)
   }
   for (row_idx = nrows - 1; row_idx; row_idx--) {
     memcpy (&(XTX[row_idx * nrows]), &(XTX[(row_idx * (row_idx + 1)) / 2]),
-	    (row_idx + 1) * sizeof (double));
+            (row_idx + 1) * sizeof (double));
   }
   for (row_idx = 0; row_idx < nrows; row_idx++) {
     read_col = &(XTX[row_idx]);
@@ -433,7 +451,7 @@ symit2 (double *XTX, uintptr_t nrows)
 
 void
 copy_transposed (double *orig_matrix, uintptr_t orig_row_ct,
-		 uintptr_t orig_col_ct, double *transposed_matrix)
+                 uintptr_t orig_col_ct, double *transposed_matrix)
 {
   uintptr_t new_row_idx;
   uintptr_t new_col_idx;
@@ -489,8 +507,7 @@ main (int argc, char **argv)
   int weightmode = NO;
   double ynrows;
   int t, tt;
-  double *xmean, *xfancy;
-  double *ldvv = NULL, ynumsnps = 0;	// for grm
+  double *ldvv = NULL, ynumsnps = 0;    // for grm
   int *ldsnpbuff = NULL;
   int lastldchrom, numld;
   double *fstans, *fstsd;
@@ -502,10 +519,11 @@ main (int argc, char **argv)
   double *eigkurt, *eigindkurt;
   double *wmean;
   char **elist;
-  double *shrink;
+  double *mmat;
   double *trow = NULL, *rhs = NULL, *emat = NULL, *regans = NULL;
   int kk;
   double *acoeffs, *bcoeffs, *apt, *bpt, *azq, *bzq;
+  int rngmode = NO;
 
 
   int xblock;
@@ -535,21 +553,26 @@ main (int argc, char **argv)
       fastiter = numeigs;
     if (fastdim < 0)
       fastdim = 2 * numeigs;
+    rngmode = YES;
   }
 
-/**
-  if (fastmode) {
-   printf("fastmode => easymode\n") ;
-   easymode = YES ;
+  if (popsizelimit > 0)
+    rngmode = YES;
+
+  if (rngmode) {
+    if (seed == 0)
+      seed = seednum ();
+    printf ("seed: %ld\n", seed);
+    SRAND (seed);
   }
-*/
+
 
   if (usepopsformissing) {
     printf ("usepopsformissing => easymode\n");
     easymode = YES;
   }
 
-  if (deletesnpoutname != NULL) {	/* remove because snplog opens in append mode */
+  if (deletesnpoutname != NULL) {       /* remove because snplog opens in append mode */
     char buff[256];
     sprintf (buff, "rm -f %s", deletesnpoutname);
     system (buff);
@@ -575,12 +598,19 @@ main (int argc, char **argv)
 
   outlfile = ofile = stdout;
 
-  if (outputname != NULL)
+//if (outputname != NULL)  openit(outputname, &ofile, "w") ;
+  if (shrinkmode)
+    openit ("/dev/null", &ofile, "w");
+  if ((outputname != NULL) && (!shrinkmode))
     openit (outputname, &ofile, "w");
   if (outliername != NULL)
     openit (outliername, &outlfile, "w");
   if (fstdetailsname != NULL)
     openit (fstdetailsname, &fstdetails, "w");
+
+  if (shrinkmode) {
+    easymode = fastmode = NO;
+  }
 
   if ((ldlimit <= 0) || (ldposlimit <= 0))
     ldregress = 0;
@@ -595,7 +625,7 @@ main (int argc, char **argv)
   }
 
   k = getgenos (genotypename, snpmarkers, indivmarkers,
-		numsnps, numindivs, nignore);
+                numsnps, numindivs, nignore);
 
 
   if (poplistname != NULL) {
@@ -662,7 +692,7 @@ main (int argc, char **argv)
   if (killr2) {
     nkill =
       killhir2 (snpmarkers, numsnps, numindivs, r2physlim, r2genlim,
-		r2thresh);
+                r2thresh);
     if (nkill > 0)
       printf ("killhir2.  number of snps killed: %d\n", nkill);
   }
@@ -685,7 +715,7 @@ main (int argc, char **argv)
   }
   free (vv);
 
-  numsnps = rmsnps (snpmarkers, numsnps, deletesnpoutname);	//  rid ignorable snps
+  numsnps = rmsnps (snpmarkers, numsnps, deletesnpoutname);     //  rid ignorable snps
 
 
   if (missingmode) {
@@ -699,7 +729,7 @@ main (int argc, char **argv)
   }
   if (ldregress > 0) {
     ZALLOC (ldvv, ldregress * numindivs, double);
-    ZALLOC (ldsnpbuff, ldregress, int);	// index of snps 
+    ZALLOC (ldsnpbuff, ldregress, int); // index of snps 
   }
 
   ZALLOC (xindex, numindivs, int);
@@ -726,7 +756,12 @@ main (int argc, char **argv)
   ncols = loadsnpx (xsnplist, snpmarkers, numsnps, indivmarkers);
 
   printf ("number of samples used: %d number of snps used: %d\n", nrows,
-	  ncols);
+          ncols);
+
+  if (shrinkmode) {
+    ZALLOC (mmat, nrows * ncols, double);
+    regmode = YES;
+  }
 
   if (fastmode) {
 
@@ -738,22 +773,16 @@ main (int argc, char **argv)
 
     kjg_fpca (numeigs, fastdim, fastiter, evals, evecs);
 
-    printf ("##bug: \n");
-    printmat (evals, 1, numeigs);
-    printmat (evecs, 1, 20);
-
-    if (outputvname != NULL) {
-      openit (outputvname, &ovfile, "w");
-      for (j = 0; j < nrows; j++) {
-	fprintf (ovfile, "%12.6f\n", lambda[j]);
-      }
-      fclose (ovfile);
+    if (verbose) {
+      printf ("##bug: \n");
+      printmat (evals, 1, numeigs);
+      printmat (evecs, 1, 20);
     }
 
     transpose (evecs, evecs, nrows, numeigs);
 
     printevecs (xsnplist, indivmarkers, xindlist,
-		numindivs, ncols, nrows, numeigs, evecs, evals, ofile);
+                numindivs, ncols, nrows, numeigs, evecs, evals, ofile);
 
 
     printf ("end of smartpca(fastmode)\n");
@@ -789,6 +818,7 @@ main (int argc, char **argv)
     ZALLOC (tblock, nrows * blocksize, double);
   }
 
+
   ZALLOC (lambda, nrows, double);
   ZALLOC (esize, nrows, double);
   ZALLOC (cc, (nrows > 3) ? nrows : 3, double);
@@ -816,6 +846,16 @@ main (int argc, char **argv)
 
   // try to autodetect number of (virtual) processors, and use that number to
   // set the thread count.  allow the user to override this in the future
+#if _WIN32
+  SYSTEM_INFO sysinfo;
+  if (thread_ct_config <= 0) {
+    GetSystemInfo (&sysinfo);
+    thread_ct = sysinfo.dwNumberOfProcessors;
+  }
+  else {
+    thread_ct = thread_ct_config;
+  }
+#else
   if (thread_ct_config <= 0) {
     i = sysconf (_SC_NPROCESSORS_ONLN);
     if (i == -1) {
@@ -828,6 +868,7 @@ main (int argc, char **argv)
   else {
     thread_ct = thread_ct_config;
   }
+#endif
   if (thread_ct > 8) {
     if (thread_ct > MAX_THREADS) {
       thread_ct = MAX_THREADS;
@@ -843,8 +884,8 @@ main (int argc, char **argv)
     }
   }
   printf ("Using %u thread%s%s.\n", thread_ct, (thread_ct == 1) ? "" : "s",
-	  (partial_sum_lookup_buf) ? ", and partial sum lookup algorithm" :
-	  "");
+          (partial_sum_lookup_buf) ? ", and partial sum lookup algorithm" :
+          "");
   triangle_fill (g_thread_start, nrows, thread_ct, 0, 1, 0, 1);
 
   nkill = 0;
@@ -878,10 +919,10 @@ main (int argc, char **argv)
     ynumsnps = 0;
     if (partial_sum_lookup_buf) {
       for (i = 0; i < nrows; i++) {
-	binary_cols[i] = 0;
+        binary_cols[i] = 0;
       }
       for (i = 0; i < nrows; i++) {
-	binary_mmask[i] = 0;
+        binary_mmask[i] = 0;
       }
       vzero (tblock, 3 * blocksize);
     }
@@ -892,68 +933,69 @@ main (int argc, char **argv)
       cupt = xsnplist[i];
       chrom = cupt->chrom;
       if (!partial_sum_lookup_buf) {
-	tt =
-	  getcolxz (cc, cupt, xindex, xtypes, nrows, i, xmean, xfancy,
-		    &n0, &n1);
+        tt =
+          getcolxz (cc, cupt, xindex, xtypes, nrows, i, xmean, xfancy,
+                    &n0, &n1);
       }
       else {
-	tt =
-	  getcolxz_binary1 (binary_rawcol, cc, cupt, xindex, nrows, i,
-			    xmean, xfancy, &n0, &n1);
+        tt =
+          getcolxz_binary1 (binary_rawcol, cc, cupt, xindex, nrows, i,
+                            xmean, xfancy, &n0, &n1);
       }
+
 
       t = MIN (n0, n1);
 
       if ((t < minallelecnt) || (tt > maxmissing) || (tt < 0) || (t == 0)) {
-	t = MAX (t, 0);
-	tt = MAX (tt, 0);
-	cupt->ignore = YES;
-	logdeletedsnp (cupt->ID, "minallelecnt", deletesnpoutname);
-	vzero (cc, nrows);
-	if (nkill < 10)
-	  printf (" snp %20s ignored . allelecnt: %5d  missing: %5d\n",
-		  cupt->ID, t, tt);
-	++nkill;
-	continue;
+        t = MAX (t, 0);
+        tt = MAX (tt, 0);
+        cupt->ignore = YES;
+        logdeletedsnp (cupt->ID, "minallelecnt", deletesnpoutname);
+        vzero (cc, nrows);
+        if (nkill < 10)
+          printf (" snp %20s ignored . allelecnt: %5d  missing: %5d\n",
+                  cupt->ID, t, tt);
+        ++nkill;
+        continue;
       }
 
       if (lastldchrom != chrom)
-	numld = 0;
+        numld = 0;
 
       if (!partial_sum_lookup_buf) {
-	if (weightmode) {
-	  vst (cc, cc, xsnplist[i]->weight, nrows);
-	}
+        if (weightmode) {
+          vst (cc, cc, xsnplist[i]->weight, nrows);
+        }
 
 
-	if (ldregress > 0) {
+        if (ldregress > 0) {
 
-	  t = ldregx (ldvv, cc, ww, numld, nrows, ldr2lo, ldr2hi);
-	  if (t < 2) {
-	    bumpldvv (ldvv, cc, &numld, ldregress, nrows, ldsnpbuff, i);
-	    lastldchrom = chrom;
-	    ynumsnps += asum2 (ww, nrows) / asum2 (cc, nrows);
-	    // don't need to think hard about how cc is normalizes
-	  }
-	  else {
-	    // Ignore this SNP and exclude from further regressions (*ww is returned as all zeroes)
-	    bumpldvv (ldvv, ww, &numld, ldregress, nrows, ldsnpbuff, i);
-	    lastldchrom = chrom;
-	  }
-	  copyarr (ww, cc, nrows);
-	}
-	else
-	  ++ynumsnps;
-	copyarr (cc, tblock + xblock * nrows, nrows);
+          t = ldregx (ldvv, cc, ww, numld, nrows, ldr2lo, ldr2hi);
+          if (t < 2) {
+            bumpldvv (ldvv, cc, &numld, ldregress, nrows, ldsnpbuff, i);
+            lastldchrom = chrom;
+            ynumsnps += asum2 (ww, nrows) / asum2 (cc, nrows);
+            // don't need to think hard about how cc is normalizes
+          }
+          else {
+            // Ignore this SNP and exclude from further regressions (*ww is returned as all zeroes)
+            bumpldvv (ldvv, ww, &numld, ldregress, nrows, ldsnpbuff, i);
+            lastldchrom = chrom;
+          }
+          copyarr (ww, cc, nrows);
+        }
+        else
+          ++ynumsnps;
+        copyarr (cc, tblock + xblock * nrows, nrows);
       }
       else {
-	getcolxz_binary2 (binary_rawcol, binary_cols, binary_mmask,
-			  xblock, nrows);
-	if (weightmode) {
-	  vst (cc, cc, xsnplist[i]->weight, 3);
-	}
-	++ynumsnps;
-	copyarr (cc, &(tblock[xblock * 3]), 3);
+        getcolxz_binary2 (binary_rawcol, binary_cols, binary_mmask,
+                          xblock, nrows);
+        if (weightmode) {
+          vst (cc, cc, xsnplist[i]->weight, 3);
+        }
+        ++ynumsnps;
+        copyarr (cc, &(tblock[xblock * 3]), 3);
       }
 
       ++xblock;
@@ -961,41 +1003,41 @@ main (int argc, char **argv)
 
 /** this is the key code to parallelize */
       if (xblock == blocksize) {
-	if (partial_sum_lookup_buf) {
-	  domult_increment_lookup (threads, thread_ct, XTX, tblock,
-				   binary_cols, binary_mmask, xblock,
-				   nrows, partial_sum_lookup_buf);
-	  for (j = 0; j < nrows; j++) {
-	    binary_cols[j] = 0;
-	  }
-	  for (j = 0; j < nrows; j++) {
-	    binary_mmask[j] = 0;
-	  }
-	  vzero (tblock, 3 * blocksize);
-	}
-	else {
-	  domult_increment_normal (threads, thread_ct, XTX, tblock,
-				   xblock, nrows);
-	  vzero (tblock, nrows * blocksize);
-	}
-	xblock = 0;
+        if (partial_sum_lookup_buf) {
+          domult_increment_lookup (threads, thread_ct, XTX, tblock,
+                                   binary_cols, binary_mmask, xblock,
+                                   nrows, partial_sum_lookup_buf);
+          for (j = 0; j < nrows; j++) {
+            binary_cols[j] = 0;
+          }
+          for (j = 0; j < nrows; j++) {
+            binary_mmask[j] = 0;
+          }
+          vzero (tblock, 3 * blocksize);
+        }
+        else {
+          domult_increment_normal (threads, thread_ct, XTX, tblock,
+                                   xblock, nrows);
+          vzero (tblock, nrows * blocksize);
+        }
+        xblock = 0;
       }
     }
 
     if (xblock > 0) {
       if (partial_sum_lookup_buf) {
-	domult_increment_lookup (threads, thread_ct, XTX, tblock,
-				 binary_cols, binary_mmask, xblock,
-				 nrows, partial_sum_lookup_buf);
+        domult_increment_lookup (threads, thread_ct, XTX, tblock,
+                                 binary_cols, binary_mmask, xblock,
+                                 nrows, partial_sum_lookup_buf);
       }
       else {
-	domult_increment_normal (threads, thread_ct, XTX, tblock,
-				 xblock, nrows);
+        domult_increment_normal (threads, thread_ct, XTX, tblock,
+                                 xblock, nrows);
       }
     }
     symit2 (XTX, nrows);
     printf ("total number of snps killed in pass: %d  used: %d\n", nkill,
-	    nused);
+            nused);
 
     if (verbose) {
       printdiag (XTX, nrows);
@@ -1025,8 +1067,8 @@ main (int argc, char **argv)
       indx = xindlist[j];
       outpt = outinfo[j];
       fprintf (outlfile,
-	       "REMOVED outlier %s iter %d evec %d sigmage %.3f pop: %s\n",
-	       indx->ID, outliter, outpt->vecno, outpt->score, indx->egroup);
+               "REMOVED outlier %s iter %d evec %d sigmage %.3f pop: %s\n",
+               indx->ID, outliter, outpt->vecno, outpt->score, indx->egroup);
       indx->ignore = YES;
     }
     nrows = loadindx (xindlist, xindex, indivmarkers, numindivs);
@@ -1053,7 +1095,7 @@ main (int argc, char **argv)
   else {
     /* *** START of code to print Tracy-Widom statistics */
     printf ("\n## Tracy-Widom statistics: rows: %d  cols: %d\n", nrows,
-	    ncols);
+            ncols);
     y = -1.0;
     printf ("%4s  %12s", "#N", "eigenvalue");
     printf ("%12s", "difference");
@@ -1065,26 +1107,26 @@ main (int argc, char **argv)
 
     for (i = 0; i < m; ++i) {
       if (fstonly)
-	break;
+        break;
       zn = znval;
       if (zn > 0)
-	zn = MAX (ynrows, zn);
+        zn = MAX (ynrows, zn);
       tail = dotwcalc (lambda + i, m - i, &tw, &zn, &zvar, nostatslim);
       esize[i] = zn;
       printf ("%4d  %12.6f", i + 1, lambda[i]);
       if (i == 0)
-	printf ("%12s", "NA");
+        printf ("%12s", "NA");
       else
-	printf ("%12.6f", lambda[i] - lambda[i - 1]);
+        printf ("%12.6f", lambda[i] - lambda[i - 1]);
       if (tail >= 0.0)
-	printf (" %9.3f %12.6g", tw, tail);
+        printf (" %9.3f %12.6g", tw, tail);
       else
-	printf (" %9s %12s", "NA", "NA");
+        printf (" %9s %12s", "NA", "NA");
       if (zn > 0.0) {
-	printf (" %9.3f", zn);
+        printf (" %9.3f", zn);
       }
       else {
-	printf (" %9s", "NA");
+        printf (" %9s", "NA");
       }
       printf ("\n");
     }
@@ -1094,42 +1136,7 @@ main (int argc, char **argv)
   numeigs = MIN (numeigs, nrows);
   numeigs = MIN (numeigs, ncols);
 
-  ZALLOC (shrink, numeigs, double);
-  vclear (shrink, 1.0, numeigs);
-  t = nrows - numeigs;
-  if (t > 0)
-    y1 = asum (lambda + numeigs, t) / (double) t;
-  y = (double) nrows / esize[numeigs];
-  y = MIN (y, 1.0 / y);		// gamma
-  for (j = 0; j < numeigs; j++) {
-    if (!shrinkmode)
-      break;
-    if (t <= 0)
-      break;
-    if (esize[j] < 0.1)
-      break;
-    y2 = lambda[j] / y1;
-// this is d after normalization (Baik Silverman);  now estimate true eigenvalue 
-    y2l = rhoinv (y2, y);
-    if (y2l < 0.0)
-      break;
-    y3 = (y2l - 1.0) / (y2l + y - 1.0);
-    y3 = MIN (y3, 1.0);
-    if (y3 < 0.0)
-      y3 = 1.0;
-    shrink[j] = y3;
-    printf ("shrink: %3d %9.3f %9.3f %9.3f\n", j, shrink[j], y2, y2l);
-  }
 
-  /* fprintf(ofile, "##genotypes: %s\n", genotypename) ; */
-  /* fprintf(ofile, "##numrows(indivs):: %d\n", nrows) ; */
-  /* fprintf(ofile, "##numcols(snps):: %d\n", ncols) ; */
-  /* fprintf(ofile, "##numeigs:: %d\n", numeigs) ; */
-  fprintf (ofile, "%20s ", "#eigvals:");
-  for (j = 0; j < numeigs; j++) {
-    fprintf (ofile, "%9.3f ", lambda[j]);
-  }
-  fprintf (ofile, "\n");
 
   if (outputvname != NULL) {
     openit (outputvname, &ovfile, "w");
@@ -1139,6 +1146,11 @@ main (int argc, char **argv)
     fclose (ovfile);
   }
 
+  fprintf (ofile, "%20s ", "#eigvals:");
+  for (j = 0; j < numeigs; j++) {
+    fprintf (ofile, "%9.3f ", lambda[j]);
+  }
+  fprintf (ofile, "\n");
   ZALLOC (fvecs, nrows * numeigs, double);
   ZALLOC (fxvecs, nrows * numeigs, double);
   ZALLOC (fxscal, numeigs, double);
@@ -1151,15 +1163,15 @@ main (int argc, char **argv)
     for (j = 0; j < numeigs; j++) {
       xpt = fvecs + j * nrows;
       y = asum2 (xpt, nrows);
-      vst (xpt, xpt, 1.0 / sqrt (y), nrows);	// norm 1
+      vst (xpt, xpt, 1.0 / sqrt (y), nrows);    // norm 1
     }
     for (i = 0; i < nrows; i++) {
       indx = xindlist[i];
       fprintf (ofile, "%20s ", indx->ID);
       for (j = 0; j < numeigs; j++) {
-	xpt = fvecs + j * nrows;
-	y = xpt[i];
-	fprintf (ofile, "%10.4f  ", y);
+        xpt = fvecs + j * nrows;
+        y = xpt[i];
+        fprintf (ofile, "%10.4f  ", y);
       }
       fprintf (ofile, "%15s\n", indx->egroup);
     }
@@ -1169,16 +1181,16 @@ main (int argc, char **argv)
       ZALLOC (elist, numeg, char *);
 
       for (j = 0; j < numeigs; j++) {
-	xpt = fvecs + j * nrows;
-	calcpopmean (wmean, elist, xpt, eglist, numeg, xtypes, nrows);
-	printf ("eig: %d ", j + 1);
-	printf ("min: %s %9.3f  ", elist[0], wmean[0]);
-	printf ("max: %s %9.3f  ", elist[numeg - 1], wmean[numeg - 1]);
-	printnl ();
-	for (k = 0; k < numeg; ++k) {
-	  printf ("%20s ", elist[k]);
-	  printf (" %9.3f\n", wmean[k]);
-	}
+        xpt = fvecs + j * nrows;
+        calcpopmean (wmean, elist, xpt, eglist, numeg, xtypes, nrows);
+        printf ("eig: %d ", j + 1);
+        printf ("min: %s %9.3f  ", elist[0], wmean[0]);
+        printf ("max: %s %9.3f  ", elist[numeg - 1], wmean[numeg - 1]);
+        printnl ();
+        for (k = 0; k < numeg; ++k) {
+          printf ("%20s ", elist[k]);
+          printf (" %9.3f\n", wmean[k]);
+        }
       }
     }
 
@@ -1191,7 +1203,7 @@ main (int argc, char **argv)
 
     for (j = 0; j < numeigs; j++) {
       for (k = 0; k < nrows; k++) {
-	ffvecs[j * ncols + i] += fvecs[j * nrows + k] * cc[k];
+        ffvecs[j * ncols + i] += fvecs[j * nrows + k] * cc[k];
       }
     }
   }
@@ -1225,7 +1237,7 @@ main (int argc, char **argv)
   for (j = 0; j < numeigs; j++) {
     y = fxscal[j];
 //  fxscal[j] = 10.0/sqrt(y) ; // eigenvectors have norm 10 (perhaps eccentric)
-    fxscal[j] = 1.0 / sqrt (y);	// standard
+    fxscal[j] = 1.0 / sqrt (y); // standard
   }
 
 
@@ -1238,23 +1250,19 @@ main (int argc, char **argv)
     free (binary_mmask);
   }
   free (tblock);
+
   if (regmode) {
     ZALLOC (trow, ncols, double);
     ZALLOC (rhs, ncols, double);
     ZALLOC (emat, ncols * numeigs, double);
     ZALLOC (regans, numeigs, double);
-/**
-   for (j=0; j<numeigs; ++j) { 
-     xpt = ffvecs+j*ncols ;
-     y = asum2(xpt, ncols) ; 
-     fxscal[j] = (double) ncols / sqrt(y*y) ;
-   }
-*/
   }
 
 
   for (i = 0; i < numindivs; i++) {
     if (!regmode)
+      break;
+    if (shrinkmode)
       break;
     indx = indivmarkers[i];
     if (indx->ignore)
@@ -1266,10 +1274,10 @@ main (int argc, char **argv)
     kk = 0;
     for (k = 0; k < ncols; ++k) {
       if (trow[k] < 0)
-	continue;
+        continue;
       rhs[kk] = xrow[k];
       for (j = 0; j < numeigs; j++) {
-	emat[kk * numeigs + j] = fxscal[j] * ffvecs[j * ncols + k];
+        emat[kk * numeigs + j] = fxscal[j] * ffvecs[j * ncols + k];
       }
       ++kk;
     }
@@ -1293,13 +1301,11 @@ main (int argc, char **argv)
 
     for (j = 0; j < numeigs; j++) {
       y = fxscal[j] * vdot (xrow, ffvecs + j * ncols, ncols);
-      if (shrinkmode && (indx->affstatus == YES))
-	y *= shrink[j];
       bcoeffs[j * numindivs + i] = y;
     }
   }
 
-  if (!regmode) {
+  if ((!regmode) || shrinkmode) {
     free (acoeffs);
     acoeffs = bcoeffs;
   }
@@ -1311,8 +1317,12 @@ main (int argc, char **argv)
   sqz (bzq, bcoeffs, numeigs, nrows, xindex);
 
   for (j = 0; j < numeigs; ++j) {
+
     if (!regmode)
       break;
+    if (shrinkmode)
+      break;
+
     apt = azq + j * nrows;
     bpt = bzq + j * nrows;
     y = vdot (apt, bpt, nrows) / vdot (apt, apt, nrows);
@@ -1376,8 +1386,8 @@ main (int argc, char **argv)
     printxcorr (XTX, nrows, xindlist);
     if (snpoutfilename != NULL) {
       outfiles (snpoutfilename, indoutfilename, genooutfilename,
-		snpmarkers, indivmarkers, numsnps, numindivs, packout,
-		ogmode);
+                snpmarkers, indivmarkers, numsnps, numindivs, packout,
+                ogmode);
     }
 
     printf ("##end of smartpca run\n");
@@ -1396,7 +1406,7 @@ main (int argc, char **argv)
     ZALLOC (inbans, numeg, double);
     ZALLOC (inbsd, numeg, double);
     doinbxx (inbans, inbsd, xsnplist, xindex, xtypes,
-	     nrows, ncols, numeg, blgsize, snpmarkers, indivmarkers);
+             nrows, ncols, numeg, blgsize, snpmarkers, indivmarkers);
     printf ("## inbreeding coeffs:   inbreed    std error\n");
     for (k1 = 0; k1 < numeg; ++k1) {
       printf (" %20s %10.4f %10.4f\n", eglist[k1], inbans[k1], inbsd[k1]);
@@ -1406,22 +1416,22 @@ main (int argc, char **argv)
   }
 
   dofstxx (fstans, fstsd, xsnplist, xindex, xtypes,
-	   nrows, ncols, numeg, blgsize, snpmarkers, indivmarkers);
+           nrows, ncols, numeg, blgsize, snpmarkers, indivmarkers);
 
   if ((phylipname == NULL) && (numeg > 10)) {
     printf
       ("## Fst statistics between populations:         fst       std error\n");
     for (k1 = 0; k1 < numeg; ++k1) {
       for (k2 = k1 + 1; k2 < numeg; ++k2) {
-	if (fsthiprec == NO) {
-	  printf (" %20s %20s %9.3f %10.4f\n", eglist[k1], eglist[k2],
-		  fstans[k1 * numeg + k2], fstsd[k1 * numeg + k2]);
-	}
-	if (fsthiprec == YES) {
-	  printf (" %20s %20s %12.6f %12.6f\n", eglist[k1],
-		  eglist[k2], fstans[k1 * numeg + k2],
-		  fstsd[k1 * numeg + k2]);
-	}
+        if (fsthiprec == NO) {
+          printf (" %20s %20s %9.3f %10.4f\n", eglist[k1], eglist[k2],
+                  fstans[k1 * numeg + k2], fstsd[k1 * numeg + k2]);
+        }
+        if (fsthiprec == YES) {
+          printf (" %20s %20s %12.6f %12.6f\n", eglist[k1],
+                  eglist[k2], fstans[k1 * numeg + k2],
+                  fstsd[k1 * numeg + k2]);
+        }
       }
     }
     printf ("\n");
@@ -1431,9 +1441,9 @@ main (int argc, char **argv)
       ("## Fst statistics between populations:         fst       std error\n");
     for (k1 = 0; k1 < numeg; ++k1) {
       for (k2 = k1 + 1; k2 < numeg; ++k2) {
-	fprintf (fstdetails, "F_st %20s %20s %12.6f %12.6f\n",
-		 eglist[k1], eglist[k2], fstans[k1 * numeg + k2],
-		 fstsd[k1 * numeg + k2]);
+        fprintf (fstdetails, "F_st %20s %20s %12.6f %12.6f\n",
+                 eglist[k1], eglist[k2], fstans[k1 * numeg + k2],
+                 fstsd[k1 * numeg + k2]);
       }
     }
     fprintf (fstdetails, "\n");
@@ -1447,9 +1457,9 @@ main (int argc, char **argv)
       strncpy (sss, eglist[k1], 10);
       fprintf (phylipfile, "%10s", sss);
       for (k2 = 0; k2 < numeg; ++k2) {
-	y1 = fstans[k1 * numeg + k2];
-	y2 = fstans[k2 * numeg + k1];
-	fprintf (phylipfile, "%6.3f", (0.5 * (y1 + y2)));
+        y1 = fstans[k1 * numeg + k2];
+        y2 = fstans[k2 * numeg + k1];
+        fprintf (phylipfile, "%6.3f", (0.5 * (y1 + y2)));
       }
       fprintf (phylipfile, "\n");
     }
@@ -1497,7 +1507,7 @@ main (int argc, char **argv)
       ychi = chitot[k1 * numeg + k2];
       tail = rtlchsq (numeigs, ychi);
       printf ("popdifference:  %20s  %20s  %12.3f  %12.6g", eglist[k1],
-	      eglist[k2], ychi, tail);
+              eglist[k2], ychi, tail);
       printf ("   %5d", xpopsize[k1]);
       printf ("   %5d", xpopsize[k2]);
       printf ("\n");
@@ -1526,10 +1536,33 @@ main (int argc, char **argv)
   writesnpeigs (snpeigname, xsnplist, ffvecs, numeigs, ncols);
   if (snpoutfilename != NULL) {
     outfiles (snpoutfilename, indoutfilename, genooutfilename,
-	      snpmarkers, indivmarkers, numsnps, numindivs, packout, ogmode);
+              snpmarkers, indivmarkers, numsnps, numindivs, packout, ogmode);
   }
 
-  printf ("##end of smartpca run\n");
+  if (!shrinkmode) {
+    printf ("##end of smartpca run\n");
+    return 0;
+  }
+
+  printf
+    ("##end of primary run (computation of shrunk eigenvectors begins\n");
+
+  for (i = 0; i < ncols; ++i) {
+    cupt = xsnplist[i];
+    getcolxf (cc, cupt, xindex, nrows, i, NULL, NULL);
+    for (j = 0; j < nrows; ++j) {
+      mmat[j * ncols + i] = cc[j];
+    }
+  }
+
+
+  fclose (ofile);
+  if (outputname != NULL)
+    openit (outputname, &ofile, "w");
+  else
+    ofile = stdout;
+  doshrinkp (mmat, nrows, ncols, xindex, xsnplist);
+
   return 0;
 }
 
@@ -1578,39 +1611,41 @@ readcommands (int argc, char **argv)
   getstring (ph, "indivname:", &indivname);
   getstring (ph, "poplistname:", &poplistname);
   getstring (ph, "snpeigname:", &snpeigname);
-  getstring (ph, "snpweightoutname:", &snpeigname);	/* changed 09/18/07 */
+  getstring (ph, "snpweightoutname:", &snpeigname);     /* changed 09/18/07 */
   getstring (ph, "output:", &outputname);
   getstring (ph, "outputvecs:", &outputname);
-  getstring (ph, "evecoutname:", &outputname);	/* changed 11/02/06 */
+  getstring (ph, "evecoutname:", &outputname);  /* changed 11/02/06 */
   getstring (ph, "outputvals:", &outputvname);
-  getstring (ph, "evaloutname:", &outputvname);	/* changed 11/02/06 */
+  getstring (ph, "evaloutname:", &outputvname); /* changed 11/02/06 */
   getstring (ph, "badsnpname:", &badsnpname);
   getstring (ph, "outliername:", &outliername);
-  getstring (ph, "outlieroutname:", &outliername);	/* changed 11/02/06 */
+  getstring (ph, "outlieroutname:", &outliername);      /* changed 11/02/06 */
   getstring (ph, "phylipname:", &phylipname);
-  getstring (ph, "phylipoutname:", &phylipname);	/* changed 11/02/06 */
+  getstring (ph, "phylipoutname:", &phylipname);        /* changed 11/02/06 */
   getstring (ph, "weightname:", &weightname);
   getstring (ph, "fstdetailsname:", &fstdetailsname);
   getstring (ph, "deletsnpoutname:", &deletesnpoutname);
   getint (ph, "numeigs:", &numeigs);
   getint (ph, "maxpops:", &maxpops);
   maxpops = MIN (maxpops, MAXPOPS);
-  getint (ph, "numoutevec:", &numeigs);	/* changed 11/02/06 */
+  getint (ph, "numoutevec:", &numeigs); /* changed 11/02/06 */
   getint (ph, "markerscore:", &markerscore);
   getint (ph, "chisqmode:", &chisqmode);
   getint (ph, "missingmode:", &missingmode);
   getint (ph, "shrinkmode:", &shrinkmode);
   getint (ph, "fancynorm:", &fancynorm);
-  getint (ph, "usenorm:", &fancynorm);	/* changed 11/02/06 */
+  getint (ph, "usenorm:", &fancynorm);  /* changed 11/02/06 */
   getint (ph, "dotpopsmode:", &dotpopsmode);
-  getint (ph, "pcorrmode:", &pcorrmode);	/* print correlations */
-  getint (ph, "pcpopsonly:", &pcpopsonly);	/* but only within population */
+  getint (ph, "pcorrmode:", &pcorrmode);        /* print correlations */
+  getint (ph, "pcpopsonly:", &pcpopsonly);      /* but only within population */
   getint (ph, "altnormstyle:", &altnormstyle);
   getint (ph, "hashcheck:", &hashcheck);
   getint (ph, "popgenmode:", &altnormstyle);
   getint (ph, "noxdata:", &noxdata);
   getint (ph, "inbreed:", &inbreed);
   getint (ph, "easymode:", &easymode);
+  getint (ph, "seed:", &t);
+  seed = (long) t;
 
   getint (ph, "fastmode:", &fastmode);
   getint (ph, "fastdim:", &fastdim);
@@ -1637,39 +1672,39 @@ readcommands (int argc, char **argv)
   getint (ph, "fsthiprecision:", &fsthiprec);
 
   getint (ph, "ldregress:", &ldregress);
-  getint (ph, "nsnpldregress:", &ldregress);	/* changed 11/02/06 */
-  getdbl (ph, "ldlimit:", &ldlimit);	/* in morgans */
-  getint (ph, "ldposlimit:", &ldposlimit);	/* bases */
+  getint (ph, "nsnpldregress:", &ldregress);    /* changed 11/02/06 */
+  getdbl (ph, "ldlimit:", &ldlimit);    /* in morgans */
+  getint (ph, "ldposlimit:", &ldposlimit);      /* bases */
   getdbl (ph, "ldr2lo:", &ldr2lo);
   getdbl (ph, "ldr2hi:", &ldr2hi);
-  getdbl (ph, "maxdistldregress:", &ldlimit);	/* in morgans *//* changed 11/02/06 */
+  getdbl (ph, "maxdistldregress:", &ldlimit);   /* in morgans *//* changed 11/02/06 */
   getint (ph, "minleneig:", &nostatslim);
   getint (ph, "malexhet:", &malexhet);
-  getint (ph, "nomalexhet:", &malexhet);	/* changed 11/02/06 */
+  getint (ph, "nomalexhet:", &malexhet);        /* changed 11/02/06 */
   getint (ph, "familynames:", &familynames);
   getint (ph, "qtmode:", &qtmode);
 
   getint (ph, "numoutliter:", &numoutliter);
-  getint (ph, "numoutlieriter:", &numoutliter);	/* changed 11/02/06 */
+  getint (ph, "numoutlieriter:", &numoutliter); /* changed 11/02/06 */
   getint (ph, "numoutleigs", &numoutleigs);
-  getint (ph, "numoutlierevec:", &numoutleigs);	/* changed 11/02/06 */
+  getint (ph, "numoutlierevec:", &numoutleigs); /* changed 11/02/06 */
   getdbl (ph, "outlthresh:", &outlthresh);
-  getdbl (ph, "outliersigmathresh:", &outlthresh);	/* changed 11/02/06 */
-  getint (ph, "outliermode:", &outliermode);	/* test distribution with sample removed. Makes sense for small samples */
+  getdbl (ph, "outliersigmathresh:", &outlthresh);      /* changed 11/02/06 */
+  getint (ph, "outliermode:", &outliermode);    /* test distribution with sample removed. Makes sense for small samples */
   getdbl (ph, "blgsize:", &blgsize);
 
   getstring (ph, "indoutfilename:", &indoutfilename);
-  getstring (ph, "indivoutname:", &indoutfilename);	/* changed 11/02/06 */
+  getstring (ph, "indivoutname:", &indoutfilename);     /* changed 11/02/06 */
   getstring (ph, "snpoutfilename:", &snpoutfilename);
-  getstring (ph, "snpoutname:", &snpoutfilename);	/* changed 11/02/06 */
+  getstring (ph, "snpoutname:", &snpoutfilename);       /* changed 11/02/06 */
   getstring (ph, "genooutfilename:", &genooutfilename);
-  getstring (ph, "genotypeoutname:", &genooutfilename);	/* changed 11/02/06 */
+  getstring (ph, "genotypeoutname:", &genooutfilename); /* changed 11/02/06 */
   getstring (ph, "outputformat:", &omode);
   getstring (ph, "outputmode:", &omode);
   getint (ph, "outputgroup:", &ogmode);
   getstring (ph, "grmoutname:", &grmoutname);
   getint (ph, "grmbinary:", &grmbinary);
-  getint (ph, "packout:", &packout);	/* now obsolete 11/02/06 */
+  getint (ph, "packout:", &packout);    /* now obsolete 11/02/06 */
   getstring (ph, "twxtabname:", &twxtabname);
   getstring (ph, "id2pops:", &id2pops);
 
@@ -1692,7 +1727,9 @@ readcommands (int argc, char **argv)
 
 int
 fvadjust (double *cc, int n, double *pmean, double *fancy)
+
 /* take off mean  force missing to zero */
+
 /* set up fancy norming  */
 {
   double p, ynum, ysum, y, ymean, yfancy = 1.0;
@@ -1722,7 +1759,7 @@ fvadjust (double *cc, int n, double *pmean, double *fancy)
   if (pmean != NULL)
     *pmean = ymean;
   if (fancynorm) {
-    p = 0.5 * ymean;		// autosomes
+    p = 0.5 * ymean;            // autosomes
     if (altnormstyle == NO)
       p = (ysum + 1.0) / (2.0 * ynum + 2.0);
     y = p * (1.0 - p);
@@ -1736,7 +1773,7 @@ fvadjust (double *cc, int n, double *pmean, double *fancy)
 
 int
 fvadjust_binary (int c0, int c1, int nmiss, int n, double *cc, double *pmean,
-		 double *fancy)
+                 double *fancy)
 {
   double p, ynum, ysum, y, ymean, yfancy = 1.0;
 
@@ -1770,7 +1807,7 @@ fvadjust_binary (int c0, int c1, int nmiss, int n, double *cc, double *pmean,
 
 double
 dottest (char *sss, double *vec, char **eglist, int numeg, int *xtypes,
-	 int len)
+         int len)
 // vec will always have mean 0 
 // perhaps should rewrite to put xa1 etc in arrays
 {
@@ -1820,7 +1857,7 @@ dottest (char *sss, double *vec, char **eglist, int numeg, int *xtypes,
     sprintf (ss2, "%s %s ", sss, "overall");
     publishit (ss2, numeg - 1, ans);
     printf (" %20s minv: %9.3f %20s maxv: %9.3f\n",
-	    eglist[imin], wmean[imin], eglist[imax], wmean[imax]);
+            eglist[imin], wmean[imin], eglist[imax], wmean[imax]);
   }
 
 
@@ -1829,34 +1866,34 @@ dottest (char *sss, double *vec, char **eglist, int numeg, int *xtypes,
       n = 0;
       x1 = x2 = 0;
       for (i = 0; i < len; i++) {
-	k = xtypes[i];
-	if (k == k1) {
-	  w1[n] = vec[i];
-	  xt[n] = 0;
-	  ++n;
-	  ++x1;
-	}
-	if (k == k2) {
-	  w1[n] = vec[i];
-	  xt[n] = 1;
-	  ++n;
-	  ++x2;
-	}
+        k = xtypes[i];
+        if (k == k1) {
+          w1[n] = vec[i];
+          xt[n] = 0;
+          ++n;
+          ++x1;
+        }
+        if (k == k2) {
+          w1[n] = vec[i];
+          xt[n] = 1;
+          ++n;
+          ++x2;
+        }
       }
 
       if (x1 <= 1)
-	continue;
+        continue;
       if (x2 <= 1)
-	continue;
+        continue;
 
       ylike = anova1 (w1, n, xt, 2);
       ychi = 2.0 * ylike;
       chitot[k1 * numeg + k2] += ychi;
       if (chisqmode) {
-	ansx = ychi;
+        ansx = ychi;
       }
       else {
-	ansx = ftailx = anova (w1, n, xt, 2);
+        ansx = ftailx = anova (w1, n, xt, 2);
       }
 
       sprintf (ss2, "%s %s %s ", sss, eglist[k1], eglist[k2]);
@@ -1891,7 +1928,7 @@ anova (double *vec, int len, int *xtypes, int numeg)
   ZALLOC (wmean, numeg, double);
   ZALLOC (popsize, numeg, double);
 
-  y1 = asum (vec, len) / (double) len;	// mean
+  y1 = asum (vec, len) / (double) len;  // mean
   vsp (w0, vec, -y1, len);
 
   for (i = 0; i < len; i++) {
@@ -1905,7 +1942,7 @@ anova (double *vec, int len, int *xtypes, int numeg)
     ++ncall2;
     for (i = 0; i < len; ++i) {
       if (ncall2 < 0)
-	break;
+        break;
       k = xtypes[i];
 //    printf("yy %4d %4d %12.6f %12.6f\n", i, k, vec[i], w0[i]) ;
     }
@@ -1946,7 +1983,7 @@ anova1 (double *vec, int len, int *xtypes, int numeg)
   ZALLOC (wmean, numeg, double);
   ZALLOC (popsize, numeg, double);
 
-  y1 = asum (vec, len) / (double) len;	// mean
+  y1 = asum (vec, len) / (double) len;  // mean
   vsp (w0, vec, -y1, len);
 
   for (i = 0; i < len; i++) {
@@ -2000,7 +2037,7 @@ publishit (char *sss, int df, double chi)
   if (chisqmode) {
     if (ncall == 1)
       printf
-	("## Anova statistics for population differences along each eigenvector:\n");
+        ("## Anova statistics for population differences along each eigenvector:\n");
     if (ncall == 1)
       printf ("%40s %6s %9s %12s\n", "", "dof", "chisq", "p-value");
     printf ("%40s %6d %9.3f", ss2, df, chi);
@@ -2010,7 +2047,7 @@ publishit (char *sss, int df, double chi)
   else {
     if (ncall == 1)
       printf
-	("## Anova statistics for population differences along each eigenvector:\n");
+        ("## Anova statistics for population differences along each eigenvector:\n");
     if (ncall == 1)
       printf ("%40s %12s\n", "", "p-value");
     printf ("%40s ", ss2);
@@ -2048,13 +2085,13 @@ dotpops (double *X, char **eglist, int numeg, int *xtypes, int nrows)
     for (j = i + 1; j < nrows; j++) {
       k2 = xtypes[j];
       if (k1 < 0)
-	fatalx ("bug\n");
+        fatalx ("bug\n");
       if (k2 < 0)
-	fatalx ("bug\n");
+        fatalx ("bug\n");
       if (k1 >= numeg)
-	fatalx ("bug\n");
+        fatalx ("bug\n");
       if (k2 >= numeg)
-	fatalx ("bug\n");
+        fatalx ("bug\n");
       val = X[i * nrows + i] + X[j * nrows + j] - 2.0 * X[i * nrows + j];
       pp[k1 * numeg + k2] += val;
       pp[k2 * numeg + k1] += val;
@@ -2079,24 +2116,24 @@ dotpops (double *X, char **eglist, int numeg, int *xtypes, int nrows)
     for (k2 = 0; k2 < numeg; ++k2) {
       printf ("%10s", eglist[k2]);
       for (k1 = 0; k1 < numeg; ++k1) {
-	val = pp[k1 * numeg + k2];
-	printf (" %10.3f", val);
+        val = pp[k1 * numeg + k2];
+        printf (" %10.3f", val);
       };
       printf ("  %10d", popsize[k2]);
       printf ("\n");
     }
   }
-  else {			// numeg >= 10 
+  else {                        // numeg >= 10 
     printf ("\n");
     for (k2 = 0; k2 < numeg; ++k2) {
       for (k1 = k2; k1 < numeg; ++k1) {
-	printf ("dotp: %10s", eglist[k2]);
-	printf (" %10s", eglist[k1]);
-	val = pp[k1 * numeg + k2];
-	printf (" %10.3f", val);
-	printf ("    %10d", popsize[k2]);
-	printf (" %10d", popsize[k1]);
-	printf ("\n");
+        printf ("dotp: %10s", eglist[k2]);
+        printf (" %10s", eglist[k1]);
+        val = pp[k1 * numeg + k2];
+        printf (" %10.3f", val);
+        printf ("    %10d", popsize[k2]);
+        printf (" %10d", popsize[k1]);
+        printf ("\n");
       }
     }
   }
@@ -2127,7 +2164,7 @@ printxcorr (double *X, int nrows, Indiv ** indxx)
 
       t = strcmp (ind1->egroup, ind2->egroup);
       if (pcpopsonly && (t != 0))
-	continue;
+        continue;
 
 
       y1 = X[k1 * nrows + k1];
@@ -2136,7 +2173,7 @@ printxcorr (double *X, int nrows, Indiv ** indxx)
 
       rho = yy / sqrt (y1 * y2 + 1.0e-20);
       printf ("corr: %20s %20s %20s %20s %9.3f\n",
-	      ind1->ID, ind2->ID, ind1->egroup, ind2->egroup, rho);
+              ind1->ID, ind2->ID, ind1->egroup, ind2->egroup, rho);
 
     }
   }
@@ -2144,7 +2181,7 @@ printxcorr (double *X, int nrows, Indiv ** indxx)
 
 void
 bumpldvv (double *gsource, double *newsource, int *pnumld, int maxld, int n,
-	  int *ldsnpbuff, int newsnpnum)
+          int *ldsnpbuff, int newsnpnum)
 {
 
   int numld;
@@ -2165,8 +2202,8 @@ bumpldvv (double *gsource, double *newsource, int *pnumld, int maxld, int n,
     gdiff = cuptnew->genpos - cuptold->genpos;
     if ((pdiff <= ldposlimit) && (gdiff <= ldlimit))
       break;
-    copyarr (gsource + n, gsource, (maxld - 1) * n);	// overlapping move but copyarr works left to right 
-    copyiarr (ldsnpbuff + 1, ldsnpbuff, (maxld - 1));	// overlapping move but copyiarr works left to right 
+    copyarr (gsource + n, gsource, (maxld - 1) * n);    // overlapping move but copyarr works left to right 
+    copyiarr (ldsnpbuff + 1, ldsnpbuff, (maxld - 1));   // overlapping move but copyiarr works left to right 
     --numld;
   }
 
@@ -2179,8 +2216,8 @@ bumpldvv (double *gsource, double *newsource, int *pnumld, int maxld, int n,
   }
 
   if (maxld == numld) {
-    copyarr (gsource + n, gsource, (maxld - 1) * n);	// overlapping move but copyarr works left to right 
-    copyiarr (ldsnpbuff + 1, ldsnpbuff, (maxld - 1));	// overlapping move but copyiarr works left to right 
+    copyarr (gsource + n, gsource, (maxld - 1) * n);    // overlapping move but copyarr works left to right 
+    copyiarr (ldsnpbuff + 1, ldsnpbuff, (maxld - 1));   // overlapping move but copyiarr works left to right 
     --numld;
   }
   copyarr (newsource, gsource + numld * n, n);
@@ -2193,8 +2230,9 @@ bumpldvv (double *gsource, double *newsource, int *pnumld, int maxld, int n,
 
 int
 ldregx (double *gsource, double *gtarget, double *res, int rsize,
-	int n, double r2lo, double r2hi)
+        int n, double r2lo, double r2hi)
 {
+
 /** 
  gsource: array of (normalized) genotypes 
  rsize rows n long.   
@@ -2237,14 +2275,14 @@ ldregx (double *gsource, double *gtarget, double *res, int rsize,
 
       // Residual set to all zero
       for (ii = 0; ii < n; ii++)
-	res[ii] = 0;
+        res[ii] = 0;
       return 2;
       // Check if correlation not too low
     }
     else if (sum > r2lo) {
       // Retain this SNP for the regression
       for (ii = 0; ii < n; ii++)
-	gsource_pass[rsize_pass * n + ii] = gsource[i * n + ii];
+        gsource_pass[rsize_pass * n + ii] = gsource[i * n + ii];
       rsize_pass++;
     }
   }
@@ -2256,41 +2294,15 @@ ldregx (double *gsource, double *gtarget, double *res, int rsize,
     ZALLOC (www, n, double);
     ZALLOC (t_gsource_pass, rsize * n, double);
 
-    // Transpose gsource_pass to comply with regressit
-    // EIG5 BUG:
-    // transpose(t_gsource_pass,gsource_pass,rsize,n);
-    // BUG FIX:
+
+    // BUG FIX  old call in EIG5 was wrong:
     transpose (t_gsource_pass, gsource_pass, rsize_pass, n);
 
-    regressit (regans, t_gsource_pass, gtarget, n, rsize_pass);	//run regression
-    mulmat (www, regans, gsource_pass, 1, rsize_pass, n);	//multiply regans and gsource_pass
-
-/* start of bugfix by Angela Yu
-    double *t_gsource_pass_fm;
-    ZALLOC(t_gsource_pass_fm, rsize_pass*n, double);
-    int fm, fma;
-    for(fm = 0; fm < n; fm++){
-     for(fma = 0; fma < rsize_pass; fma++){
-      t_gsource_pass_fm[fm*rsize_pass+fma] = t_gsource_pass[fm*rsize+fma];
-     }
-    }
-
-    double *gsource_pass_fm;
-    ZALLOC(gsource_pass_fm, n*rsize_pass, double);
-    for(fm = 0; fm < rsize_pass; fm++){
-     for(fma = 0; fma < n; fma++){
-      gsource_pass_fm[fm*n+fma] = gsource_pass[fm*n+fma];
-     }
-    }
-
-    regressit(regans, t_gsource_pass_fm, gtarget, n, rsize_pass) ; //run regression
-    mulmat(www, regans, gsource_pass_fm,  1, rsize_pass, n) ; //multiply regans and gsource_pass
-
-    free(t_gsource_pass_fm);
-    free(gsource_pass_fm);
-    /* End of bugfix */
+    regressit (regans, t_gsource_pass, gtarget, n, rsize_pass); //run regression
+    mulmat (www, regans, gsource_pass, 1, rsize_pass, n);       //multiply regans and gsource_pass
 
     vvm (res, gtarget, www, n);
+
 
     free (regans);
     free (www);
@@ -2308,8 +2320,8 @@ ldregx (double *gsource, double *gtarget, double *res, int rsize,
 
 void
 dofstxx (double *fstans, double *fstsd, SNP ** xsnplist, int *xindex,
-	 int *xtypes, int nrows, int ncols, int numeg, double blgsize,
-	 SNP ** snpmarkers, Indiv ** indm)
+         int *xtypes, int nrows, int ncols, int numeg, double blgsize,
+         SNP ** snpmarkers, Indiv ** indm)
 {
 
   int nblocks, xnblocks;
@@ -2335,7 +2347,7 @@ dofstxx (double *fstans, double *fstsd, SNP ** xsnplist, int *xindex,
   fixwt (xsnplist, ncols, 1.0);
 
   dofstnumx (xfst, fstans, fstsd, xsnplist, xindex, xtypes,
-	     nrows, ncols, numeg, nblocks, indm, YES);
+             nrows, ncols, numeg, nblocks, indm, YES);
 
   free (blstart);
   free (blsize);
@@ -2358,7 +2370,7 @@ fixwt (SNP ** snpm, int nsnp, double val)
 
 double
 oldfstcol (double *estn, double *estd, SNP * cupt,
-	   int *xindex, int *xtypes, int nrows, int type1, int type2)
+           int *xindex, int *xtypes, int nrows, int type1, int type2)
 {
   int c1[2], c2[2], *cc;
   int *rawcol;
@@ -2438,7 +2450,7 @@ oldfstcol (double *estn, double *estd, SNP * cupt,
 
 double
 fstcol (double *estn, double *estd, SNP * cupt,
-	int *xindex, int *xtypes, int nrows, int type1, int type2)
+        int *xindex, int *xtypes, int nrows, int type1, int type2)
 {
   int c1[2], c2[2], *cc;
   int *rawcol;
@@ -2526,7 +2538,7 @@ fstcol (double *estn, double *estd, SNP * cupt,
 
 void
 writesnpeigs (char *snpeigname, SNP ** xsnplist, double *ffvecs, int numeigs,
-	      int ncols)
+              int ncols)
 {
 // this is called at end and ffvecs overwritten
   double *xpt, y, yscal, *snpsc;
@@ -2549,20 +2561,20 @@ writesnpeigs (char *snpeigname, SNP ** xsnplist, double *ffvecs, int numeigs,
     for (i = 0; i < ncols; ++i) {
       cupt = xsnplist[i];
       if (cupt->ignore)
-	continue;
+        continue;
       y = ffvecs[j * ncols + i];
       snpsc[i] = fabs (y);
     }
     for (k = 0; k < 10; ++k) {
       if (ncols <= 10)
-	break;
+        break;
 // was <= 10 Tiny bug
       vlmaxmin (snpsc, ncols, &kmax, &kmin);
       cupt = xsnplist[kmax];
       if (snpsc[kmax] < 0)
-	break;
+        break;
       printf ("eigbestsnp %4d %20s %2d %12d %9.3f\n", j + 1, cupt->ID,
-	      cupt->chrom, nnint (cupt->physpos), snpsc[kmax]);
+              cupt->chrom, nnint (cupt->physpos), snpsc[kmax]);
       snpsc[kmax] = -1.0;
     }
   }
@@ -2616,7 +2628,7 @@ writesnpeigs (char *snpeigname, SNP ** xsnplist, double *ffvecs, int numeigs,
 
 int
 getcolxz (double *xcol, SNP * cupt, int *xindex, int *xtypes, int nrows,
-	  int col, double *xmean, double *xfancy, int *n0, int *n1)
+          int col, double *xmean, double *xfancy, int *n0, int *n1)
 // side effect set xmean xfancy and count variant and reference alleles
 // returns missings after fill in
 {
@@ -2661,12 +2673,12 @@ getcolxz (double *xcol, SNP * cupt, int *xindex, int *xtypes, int nrows,
     for (j = 0; j < nrows; ++j) {
       g = rawcol[j];
       if (g >= 0)
-	continue;
+        continue;
       k = xtypes[j];
       if (popnum[k] > 0.5) {
-	y = popsum[k] / popnum[k];
-	xcol[j] = y;
-	continue;
+        y = popsum[k] / popnum[k];
+        xcol[j] = y;
+        continue;
       }
       ++nmiss;
     }
@@ -2704,8 +2716,8 @@ getcolxz (double *xcol, SNP * cupt, int *xindex, int *xtypes, int nrows,
 
 int
 getcolxz_binary1 (int *rawcol, double *xcol, SNP * cupt, int *xindex,
-		  int nrows, int col, double *xmean, double *xfancy, int *n0,
-		  int *n1)
+                  int nrows, int col, double *xmean, double *xfancy, int *n0,
+                  int *n1)
 {
   // Modified getcolxz() which converts to a 3-bit-per-genotype representation
   // compatible with PLINK 1.5's partial sum lookup outer product algorithm.
@@ -2789,7 +2801,7 @@ getcolxz_binary1 (int *rawcol, double *xcol, SNP * cupt, int *xindex,
 
 void
 getcolxz_binary2 (int *rawcol, uintptr_t * binary_cols,
-		  uintptr_t * binary_mmask, uint32_t xblock, uint32_t nrows)
+                  uintptr_t * binary_mmask, uint32_t xblock, uint32_t nrows)
 {
   // slightly better to position at 0-3-6-9-12-16-19... instead of
   // 0-3-6-9-12-15-18...
@@ -2805,10 +2817,10 @@ getcolxz_binary2 (int *rawcol, uintptr_t * binary_cols,
     cur_geno = *rawcol++;
     if (cur_geno) {
       if (cur_geno > 0) {
-	binary_cols[row_idx] |= bitfield_or[(uint32_t) cur_geno];
+        binary_cols[row_idx] |= bitfield_or[(uint32_t) cur_geno];
       }
       else {
-	binary_mmask[row_idx] |= bitfield_or[0];
+        binary_mmask[row_idx] |= bitfield_or[0];
       }
     }
   }
@@ -2820,26 +2832,46 @@ join_threads (pthread_t * threads, uint32_t ctp1)
   if (!(--ctp1)) {
     return;
   }
+#if _WIN32
+  WaitForMultipleObjects (ctp1, threads, 1, INFINITE);
+#else
   uint32_t uii;
   for (uii = 0; uii < ctp1; uii++) {
     pthread_join (threads[uii], NULL);
   }
+#endif
 }
 
+#if _WIN32
+int32_t
+spawn_threads (pthread_t * threads,
+               unsigned (__stdcall * start_routine) (void *), uintptr_t ct)
+#else
 int32_t
 spawn_threads (pthread_t * threads, void *(*start_routine) (void *),
-	       uintptr_t ct)
+               uintptr_t ct)
+#endif
 {
   uintptr_t ulii;
   if (ct == 1) {
     return 0;
   }
   for (ulii = 1; ulii < ct; ulii++) {
-    if (pthread_create
-	(&(threads[ulii - 1]), NULL, start_routine, (void *) ulii)) {
+#if _WIN32
+    threads[ulii - 1] =
+      (HANDLE) _beginthreadex (NULL, 4096, start_routine, (void *) ulii, 0,
+                               NULL);
+    if (!threads[ulii - 1]) {
       join_threads (threads, ulii);
       return -1;
     }
+#else
+    if (pthread_create
+        (&(threads[ulii - 1]), NULL, start_routine, (void *) ulii)) {
+      join_threads (threads, ulii);
+      return -1;
+    }
+#endif
   }
   return 0;
 }
@@ -2874,35 +2906,35 @@ block_increment_binary (void *arg)
     if (!base_mmask) {
       // special case: current individual has no missing genotypes in block
       for (indiv_idx2 = 0; indiv_idx2 <= cur_indiv_idx; indiv_idx2++) {
-	final_geno = ((*geno_ptr++) + base_geno) | (*mmask_ptr++);
+        final_geno = ((*geno_ptr++) + base_geno) | (*mmask_ptr++);
 #ifdef __LP64__
-	*write_ptr +=
-	  weights0[(uint16_t) final_geno] +
-	  weights1[(uint16_t) (final_geno >> 16)] +
-	  weights2[(uint16_t) (final_geno >> 32)] +
-	  weights3[final_geno >> 48];
+        *write_ptr +=
+          weights0[(uint16_t) final_geno] +
+          weights1[(uint16_t) (final_geno >> 16)] +
+          weights2[(uint16_t) (final_geno >> 32)] +
+          weights3[final_geno >> 48];
 #else
-	*write_ptr +=
-	  weights0[(uint16_t) final_geno] + weights1[final_geno >> 16];
+        *write_ptr +=
+          weights0[(uint16_t) final_geno] + weights1[final_geno >> 16];
 #endif
-	write_ptr++;
+        write_ptr++;
       }
     }
     else {
       for (indiv_idx2 = 0; indiv_idx2 <= cur_indiv_idx; indiv_idx2++) {
-	final_geno =
-	  ((*geno_ptr++) + base_geno) | ((*mmask_ptr++) | base_mmask);
+        final_geno =
+          ((*geno_ptr++) + base_geno) | ((*mmask_ptr++) | base_mmask);
 #ifdef __LP64__
-	*write_ptr +=
-	  weights0[(uint16_t) final_geno] +
-	  weights1[(uint16_t) (final_geno >> 16)] +
-	  weights2[(uint16_t) (final_geno >> 32)] +
-	  weights3[final_geno >> 48];
+        *write_ptr +=
+          weights0[(uint16_t) final_geno] +
+          weights1[(uint16_t) (final_geno >> 16)] +
+          weights2[(uint16_t) (final_geno >> 32)] +
+          weights3[final_geno >> 48];
 #else
-	*write_ptr +=
-	  weights0[(uint16_t) final_geno] + weights1[final_geno >> 16];
+        *write_ptr +=
+          weights0[(uint16_t) final_geno] + weights1[final_geno >> 16];
 #endif
-	write_ptr++;
+        write_ptr++;
       }
     }
   }
@@ -2911,10 +2943,10 @@ block_increment_binary (void *arg)
 
 void
 domult_increment_lookup (pthread_t * threads, uint32_t thread_ct,
-			 double *XTX_lower_tri, double *tblock,
-			 uintptr_t * binary_cols, uintptr_t * binary_mmask,
-			 uint32_t block_size, uint32_t indiv_ct,
-			 double *partial_sum_lookup_buf)
+                         double *XTX_lower_tri, double *tblock,
+                         uintptr_t * binary_cols, uintptr_t * binary_mmask,
+                         uint32_t block_size, uint32_t indiv_ct,
+                         double *partial_sum_lookup_buf)
 {
   // PLINK 1.5 partial sum lookup algorithm
   double increments[40];
@@ -2955,16 +2987,16 @@ domult_increment_lookup (pthread_t * threads, uint32_t thread_ct,
     for (ujj = 0; ujj < 8; ujj++) {
       partial_incr1 = increments[ujj + 32];
       for (ukk = 0; ukk < 8; ukk++) {
-	partial_incr2 = partial_incr1 + increments[ukk + 24];
-	for (umm = 0; umm < 8; umm++) {
-	  partial_incr3 = partial_incr2 + increments[umm + 16];
-	  for (unn = 0; unn < 8; unn++) {
-	    partial_incr4 = partial_incr3 + increments[unn + 8];
-	    for (uoo = 0; uoo < 8; uoo++) {
-	      *dptr++ = partial_incr4 + increments[uoo];
-	    }
-	  }
-	}
+        partial_incr2 = partial_incr1 + increments[ukk + 24];
+        for (umm = 0; umm < 8; umm++) {
+          partial_incr3 = partial_incr2 + increments[umm + 16];
+          for (unn = 0; unn < 8; unn++) {
+            partial_incr4 = partial_incr3 + increments[unn + 8];
+            for (uoo = 0; uoo < 8; uoo++) {
+              *dptr++ = partial_incr4 + increments[uoo];
+            }
+          }
+        }
       }
     }
   }
@@ -3002,12 +3034,12 @@ block_increment_normal (void *arg)
     write_ptr = write_start_ptr;
     tblock = &(g_tblock[bidx * indiv_ct]);
     for (cur_indiv_idx = start_indiv_idx; cur_indiv_idx < end_indiv_idx;
-	 cur_indiv_idx++) {
+         cur_indiv_idx++) {
       cur_tblock_val = tblock[cur_indiv_idx];
       tblock_read_ptr = tblock;
       for (indiv_idx2 = 0; indiv_idx2 <= cur_indiv_idx; indiv_idx2++) {
-	*write_ptr += cur_tblock_val * (*tblock_read_ptr++);
-	write_ptr++;
+        *write_ptr += cur_tblock_val * (*tblock_read_ptr++);
+        write_ptr++;
       }
     }
   }
@@ -3016,8 +3048,8 @@ block_increment_normal (void *arg)
 
 void
 domult_increment_normal (pthread_t * threads, uint32_t thread_ct,
-			 double *XTX_lower_tri, double *tblock,
-			 int block_size, uint32_t indiv_ct)
+                         double *XTX_lower_tri, double *tblock,
+                         int block_size, uint32_t indiv_ct)
 {
   // General case: tblock[] can have an arbitrary number of distinct values, so
   // can't use bit hacks.
@@ -3049,7 +3081,7 @@ domult_increment_normal (pthread_t * threads, uint32_t thread_ct,
 
 void
 getcolxf (double *xcol, SNP * cupt, int *xindex, int nrows, int col,
-	  double *xmean, double *xfancy)
+          double *xmean, double *xfancy)
 // side effect set xmean xfancy
 {
   int n;
@@ -3083,8 +3115,8 @@ getcolxf (double *xcol, SNP * cupt, int *xindex, int nrows, int col,
 
 void
 doinbxx (double *inbans, double *inbsd, SNP ** xsnplist, int *xindex,
-	 int *xtypes, int nrows, int ncols, int numeg, double blgsize,
-	 SNP ** snpmarkers, Indiv ** indm)
+         int *xtypes, int nrows, int ncols, int numeg, double blgsize,
+         SNP ** snpmarkers, Indiv ** indm)
 {
 
   int nblocks, xnblocks;
@@ -3102,7 +3134,7 @@ doinbxx (double *inbans, double *inbsd, SNP ** xsnplist, int *xindex,
   fixwt (xsnplist, ncols, 1.0);
 
   doinbreed (xinb, inbans, inbsd, xsnplist, xindex, xtypes,
-	     nrows, ncols, numeg, nblocks, indm);
+             nrows, ncols, numeg, nblocks, indm);
 
   free (blstart);
   free (blsize);
@@ -3113,7 +3145,7 @@ doinbxx (double *inbans, double *inbsd, SNP ** xsnplist, int *xindex,
 
 void
 calcpopmean (double *wmean, char **elist, double *vec,
-	     char **eglist, int numeg, int *xtypes, int len)
+             char **eglist, int numeg, int *xtypes, int len)
 // extracted from dotttest ;
 {
   double *w0, *w1;
@@ -3188,7 +3220,7 @@ dumpgrmid (char *fname, Indiv ** indivmarkers, int *xindex, int numid)
 
 void
 dumpgrmbin (double *XTX, int nrows, int numsnps, Indiv ** indivmarkers,
-	    int numindivs, char *grmoutname)
+            int numindivs, char *grmoutname)
 {
   int a, b;
   double y;
@@ -3243,7 +3275,7 @@ dumpgrmbin (double *XTX, int nrows, int numsnps, Indiv ** indivmarkers,
   bb = (char *) &yfloat;
   for (a = 0; a < nrows; a++) {
     for (b = 0; b <= a; b++) {
-      y = XTX[a * nrows + b] / y_norm;	// bugfix
+      y = XTX[a * nrows + b] / y_norm;  // bugfix
       yfloat = (float) y;
       ret = write (fdes, bb, 4);
     }
@@ -3253,7 +3285,7 @@ dumpgrmbin (double *XTX, int nrows, int numsnps, Indiv ** indivmarkers,
 
 void
 dumpgrm (double *XTX, int *xindex, int nrows, int numsnps,
-	 Indiv ** indivmarkers, int numindivs, char *grmoutname)
+         Indiv ** indivmarkers, int numindivs, char *grmoutname)
 {
   int a, b;
   double y;
@@ -3282,7 +3314,7 @@ dumpgrm (double *XTX, int *xindex, int nrows, int numsnps,
   openit (grmoutname, &fff, "w");
   for (a = 0; a < nrows; a++) {
     for (b = 0; b <= a; b++) {
-      y = XTX[a * nrows + b];	// bugfix: do NOT want to dereference xindex here
+      y = XTX[a * nrows + b];   // bugfix: do NOT want to dereference xindex here
       fprintf (fff, "%d %d ", a + 1, b + 1);
       fprintf (fff, "%d ", numsnps);
       fprintf (fff, "%0.6f\n", y * y_norm_recip);
@@ -3294,8 +3326,8 @@ dumpgrm (double *XTX, int *xindex, int nrows, int numsnps,
 
 void
 printevecs (SNP ** snpmarkers, Indiv ** indivmarkers, Indiv ** xindlist,
-	    int numindivs, int ncols, int nrows,
-	    int numeigs, double *eigenvecs, double *eigenvals, FILE * ofile)
+            int numindivs, int ncols, int nrows,
+            int numeigs, double *eigenvecs, double *eigenvals, FILE * ofile)
 {
 
   double *ffvecs, *fvecs, *cc, *xrow, *bcoeffs, y;
@@ -3309,7 +3341,7 @@ printevecs (SNP ** snpmarkers, Indiv ** indivmarkers, Indiv ** xindlist,
   }
   fprintf (ofile, "\n");
 
-  if (easymode) {
+  if ((easymode) || (nrows == numindivs)) {
 // should be separate routine
 
     ZALLOC (fvecs, nrows * numeigs, double);
@@ -3318,15 +3350,15 @@ printevecs (SNP ** snpmarkers, Indiv ** indivmarkers, Indiv ** xindlist,
     for (j = 0; j < numeigs; j++) {
       xpt = fvecs + j * nrows;
       y = asum2 (xpt, nrows);
-      vst (xpt, xpt, 1.0 / sqrt (y), nrows);	// norm 1
+      vst (xpt, xpt, 1.0 / sqrt (y), nrows);    // norm 1
     }
     for (i = 0; i < nrows; i++) {
       indx = xindlist[i];
       fprintf (ofile, "%20s ", indx->ID);
       for (j = 0; j < numeigs; j++) {
-	xpt = fvecs + j * nrows;
-	y = xpt[i];
-	fprintf (ofile, "%10.4f  ", y);
+        xpt = fvecs + j * nrows;
+        y = xpt[i];
+        fprintf (ofile, "%10.4f  ", y);
       }
       fprintf (ofile, "%15s\n", indx->egroup);
     }
@@ -3348,8 +3380,8 @@ printevecs (SNP ** snpmarkers, Indiv ** indivmarkers, Indiv ** xindlist,
   for (i = 0; i < ncols; i++) {
     for (j = 0; j < numeigs; j++) {
       for (k = 0; k < nrows; k++) {
-	getgval (k, i, &val);
-	ffvecs[j * ncols + i] += fvecs[j * nrows + k] * val;
+        getgval (k, i, &val);
+        ffvecs[j * ncols + i] += fvecs[j * nrows + k] * val;
       }
     }
   }
@@ -3382,7 +3414,7 @@ printevecs (SNP ** snpmarkers, Indiv ** indivmarkers, Indiv ** xindlist,
 
     for (j = 0; j < numeigs; j++) {
       bcoeffs[j * numindivs + i] = y =
-	fxscal[j] * vdot (xrow, ffvecs + j * ncols, ncols);
+        fxscal[j] * vdot (xrow, ffvecs + j * ncols, ncols);
     }
   }
 
@@ -3407,4 +3439,436 @@ printevecs (SNP ** snpmarkers, Indiv ** indivmarkers, Indiv ** xindlist,
   free (xrow);
   free (bcoeffs);
   free (fxscal);
+}
+
+void
+norme (double *ee, int n)
+{
+// ee returned as mean 0 , square norm 1 
+  double y;
+  y = asum (ee, n) / (double) n;
+  vsp (ee, ee, -y, n);
+  y = asum2 (ee, n);
+  vst (ee, ee, 1.0 / sqrt (y), n);
+}
+
+void
+doshrink (double *mmat, int m, int n, int *xindex, SNP ** xsnplist)
+{
+  double *mmatt, *xmat, y, yscale;
+  double *evecs, *lambda;
+  double *dv1, *dd, *d, delta, *evec, *ww, *w2, *ediff;
+  double eco, lam;
+  int i, j, k, l, a, t;
+  char cc;
+  double *sold, *snew, *enew, *ss;
+  int debug;
+  double *xrow, *ffvec;
+  Indiv *xindlist;
+
+
+  printf ("doshrink called\n");
+  fflush (stdout);
+
+  ZALLOC (xmat, m * m, double);
+  ZALLOC (evecs, m * m, double);
+  ZALLOC (lambda, m * m, double);
+  ZALLOC (dd, m * m, double);
+  ZALLOC (dv1, m, double);
+  ZALLOC (d, m, double);
+  ZALLOC (ww, m, double);
+  ZALLOC (w2, m, double);
+  ZALLOC (ediff, m, double);
+  ZALLOC (enew, m, double);
+  ZALLOC (xrow, n, double);
+
+  ZALLOC (sold, numeigs * m, double);
+  ZALLOC (snew, numeigs * m, double);
+  ZALLOC (ss, numeigs * numindivs, double);
+
+  for (i = 0; i < m; i++) {
+    for (j = 0; j < m; j++) {
+      for (k = 0; k < n; ++k) {
+        xmat[i * m + j] += mmat[i * n + k] * mmat[j * n + k];
+      }
+    }
+  }
+
+  yscale = y = trace (xmat, m) / (double) (m - 1);
+  printf ("trace:  %9.3f\n", y);
+  if (y <= 0.0)
+    fatalx ("mmat has zero trace (perhaps no data)\n");
+  vst (xmat, xmat, 1.0 / y, m * m);
+  printdiag (xmat, m);
+  eigvecs (xmat, lambda, evecs, m);
+  printf ("lambda sum: %9.3f\n", asum (lambda, m));
+
+  for (i = 0; i < numeigs; i++) {
+    evec = evecs + i * m;
+    norme (evec, m);
+    lam = lambda[i];
+    mulmat (ww, evec, xmat, 1, m, m);
+    vst (ww, ww, 1.0 / lam, m);
+    norme (ww, m);
+    copyarr (ww, sold + i * m, m);
+// these 2 lines are ust to be uniform with snew
+    for (a = 0; a < m; a++) {
+      debug = NO;
+//   if ((i==0) && (a==1)) debug = YES ;
+      vst (dv1, xmat + a * m, -1, m);
+      vzero (dd, m * m);
+      for (k = 0; k < m; k++) {
+        dd[a * m + k] = dd[k * m + a] = dv1[k];
+      }
+      mulmat (ww, dd, evec, m, m, 1);
+      delta = vdot (ww, evec, m);
+      if (debug)
+        printf ("zz1 %15.9f %15.9f %15.9f\n", dv1[0], asum (dv1, m), delta);
+      vzero (ediff, m);
+      for (k = 0; k < m; k++) {
+        if (k == i)
+          continue;
+        eco = vdot (evecs + k * m, ww, m);
+        eco /= (lam - lambda[k]);
+        vst (w2, evecs + k * m, eco, m);
+        vvp (ediff, ediff, w2, m);
+      }
+      printf ("a: %d  i: %d\n", a, i);
+      printf ("lam, delta: %9.3f %9.3f\n", lam, delta);
+      vvp (enew, evec, ediff, m);
+      enew[a] = 0;
+      y = asum (enew, m) / (double) (m - 1);
+      vsp (enew, enew, -y, m);
+      enew[a] = 0;
+      norme (enew, m);
+      if (debug)
+        printf ("zz2 %15.9f %15.9f\n", ediff[0], ediff[1]);
+      if (debug)
+        printf ("zz3 %15.9f %15.9f\n", enew[0], enew[1]);
+      for (k = 0; k < m; k++) {
+        printf ("%3d: ", k);
+        cc = ' ';
+        if (k == a)
+          cc = '*';
+        printf ("%c ", cc);
+        printf ("%9.3f %9.3f %9.3f", evec[k], ediff[k], enew[k]);
+        printnl ();
+      }
+
+      snew[i * m + a] = vdot (enew, xmat + a * m, m) / (lam + delta);
+    }
+
+  }
+  printf ("sold snew:\n");
+
+  for (a = 0; a < m; a++) {
+    printf ("a: %3d ", a);
+    for (i = 0; i < numeigs; i++) {
+      printf ("%9.3f ", sold[i * m + a]);
+    }
+    printf ("  ");
+    for (i = 0; i < numeigs; i++) {
+      printf ("%9.3f ", snew[i * m + a]);
+    }
+    printnl ();
+
+  }
+
+
+
+  ZALLOC (ffvec, n, double);
+  vclear (ss, -100, numeigs * numindivs);
+  for (j = 0; j < numeigs; j++) {
+    evec = evecs + j * m;
+    mulmat (ffvec, evec, mmat, 1, m, n);
+    lam = lambda[j];
+    vst (ffvec, ffvec, 1.0 / (yscale * lam), n);
+    for (i = 0; i < numindivs; i++) {
+      t = findfirst (xindex, m, i);
+      if (t >= 0) {
+        ss[j * numindivs + i] = snew[j * m + t];
+        continue;
+      }
+      loadxdataind (xrow, xsnplist, i, n);
+      fixxrow (xrow, xmean, xfancy, n);
+      ss[j * numindivs + i] = vdot (ffvec, xrow, n);
+    }
+  }
+
+  printf ("shrink output\n");
+  for (i = 0; i < numindivs; ++i) {
+    printf ("%3d: ", i);
+    for (j = 0; j < numeigs; j++) {
+      printf ("%9.3f ", ss[j * numindivs + i]);
+    }
+    printnl ();
+  }
+
+  printevecs (xsnplist, indivmarkers, indivmarkers,
+              numindivs, n, numindivs, numeigs, ss, lambda, ofile);
+
+
+
+  free (xmat);
+  free (evecs);
+  free (lambda);
+  free (dd);
+  free (dv1);
+  free (d);
+  free (ww);
+  free (w2);
+  free (sold);
+  free (snew);
+  free (enew);
+  free (ffvec);
+  free (ss);
+  printf ("doshrink exited\n");
+  fflush (stdout);
+}
+
+void
+cpr (double *a, double *b, int n)
+{
+  double y;
+  printf ("zzcpr\n");
+  y = vdot (a, a, n);
+  printf ("a a:: %12.3f\n", y);
+  y = vdot (b, b, n);
+  printf ("b b:: %12.3f\n", y);
+  y = vdot (a, b, n);
+  printf ("a b:: %12.3f\n", y);
+}
+
+void
+doproj (double *regans, int isample, SNP ** xsnplist, double *fxvecs,
+        int numeigs, int ncols)
+{
+
+  double *xrow, *trow, *rhs, *emat;
+  int k, kk, j;
+
+  ZALLOC (xrow, ncols, double);
+  ZALLOC (trow, ncols, double);
+  ZALLOC (rhs, ncols, double);
+  ZALLOC (emat, ncols * numeigs, double);
+
+  loadxdataind (xrow, xsnplist, isample, ncols);
+  copyarr (xrow, trow, ncols);
+  fixxrow (xrow, xmean, xfancy, ncols);
+  cpr (fxvecs, xrow, ncols);
+  kk = 0;
+  for (k = 0; k < ncols; ++k) {
+    if (trow[k] < 0)
+      continue;
+    rhs[kk] = xrow[k];
+    for (j = 0; j < numeigs; j++) {
+      emat[kk * numeigs + j] = fxvecs[j * ncols + k];
+    }
+    ++kk;
+  }
+  regressit (regans, emat, rhs, kk, numeigs);
+
+  free (xrow);
+  free (trow);
+  free (rhs);
+  free (emat);
+
+}
+
+void
+doshrinkp (double *mmat, int m, int n, int *xindex, SNP ** xsnplist)
+// lsq project mode
+{
+  double *mmatt, *xmat, y, yscale;
+  double *evecs, *lambda, *ffvecs, *fxvecs;
+  double *dv1, *dd, *d, delta, *evec, *ww, *w2, *ediff;
+  double eco, lam;
+  int i, j, k, l, a, t;
+  char cc;
+  double *sold, *snew, *enew, *ss;
+  int debug;
+  double *xrow, *trow, *ffvec;
+  double ymul;
+
+  printf ("doshrink called\n");
+  fflush (stdout);
+
+  ZALLOC (xmat, m * m, double);
+  ZALLOC (evecs, m * m, double);
+  ZALLOC (lambda, m * m, double);
+  ZALLOC (dd, m * m, double);
+  ZALLOC (dv1, m, double);
+  ZALLOC (d, m, double);
+  ZALLOC (ww, m, double);
+  ZALLOC (w2, m, double);
+  ZALLOC (ediff, m, double);
+  ZALLOC (enew, m, double);
+  ZALLOC (xrow, n, double);
+  ZALLOC (ffvec, n, double);
+  ZALLOC (ffvecs, numeigs * n, double);
+  ZALLOC (fxvecs, numeigs * n, double);
+
+  ZALLOC (sold, numeigs * m, double);
+  ZALLOC (snew, numeigs * m, double);
+  ZALLOC (ss, numeigs * numindivs, double);
+
+  for (i = 0; i < m; i++) {
+    for (j = 0; j < m; j++) {
+      for (k = 0; k < n; ++k) {
+        xmat[i * m + j] += mmat[i * n + k] * mmat[j * n + k];
+      }
+    }
+  }
+
+  yscale = y = trace (xmat, m) / (double) (m - 1);
+  printf ("trace:  %9.3f\n", y);
+  if (y <= 0.0)
+    fatalx ("mmat has zero trace (perhaps no data)\n");
+  vst (xmat, xmat, 1.0 / y, m * m);
+  printdiag (xmat, m);
+  eigvecs (xmat, lambda, evecs, m);
+  printf ("lambda sum: %9.3f\n", asum (lambda, m));
+
+  for (i = 0; i < numeigs; i++) {
+    evec = evecs + i * m;
+    norme (evec, m);
+    lam = lambda[i];
+    mulmat (ww, evec, xmat, 1, m, m);
+    vst (ww, ww, 1.0 / lam, m);
+    norme (ww, m);
+    copyarr (ww, sold + i * m, m);
+
+    mulmat (ffvec, evec, mmat, 1, m, n);
+    y = asum2 (ffvec, n) / (double) n;
+    vst (ffvecs + i * n, ffvec, 1.0 / sqrt (y), n);
+  }
+
+  printf ("debugstart\n");
+  for (i = 0; i < numindivs; i++) {
+    doproj (ww, i, xsnplist, ffvecs, numeigs, n);
+    printf ("zzzdebug %4d:  %12.6f %12.6f\n", i, ww[0], ww[1]);
+    for (j = 0; j < numeigs; ++j) {
+      ss[j * numindivs + i] = ww[j];
+    }
+  }
+  printf ("debugend\n");
+// old style projection onto eigenvectors
+// normalized eigenvector 
+
+// these 2 lines are just to be uniform with snew
+  for (i = 0; i < numeigs; i++) {
+    evec = evecs + i * m;
+    lam = lambda[i];
+    mulmat (ww, evec, xmat, 1, m, m);
+    vst (ww, ww, 1.0 / lam, m);
+    norme (ww, m);
+    copyarr (ww, sold + i * m, m);
+
+    for (a = 0; a < m; a++) {
+      vst (dv1, xmat + a * m, -1, m);
+      vzero (dd, m * m);
+      for (k = 0; k < m; k++) {
+        dd[a * m + k] = dd[k * m + a] = dv1[k];
+      }
+      mulmat (ww, dd, evec, m, m, 1);
+      delta = vdot (ww, evec, m);
+      if (debug)
+        printf ("zz1 %15.9f %15.9f %15.9f\n", dv1[0], asum (dv1, m), delta);
+      vzero (ediff, m);
+      for (k = 0; k < m; k++) {
+        if (k == i)
+          continue;
+        eco = vdot (evecs + k * m, ww, m);
+        eco /= (lam - lambda[k]);
+        vst (w2, evecs + k * m, eco, m);
+        vvp (ediff, ediff, w2, m);
+      }
+      printf ("a: %d  i: %d\n", a, i);
+      printf ("lam, delta: %9.3f %9.3f\n", lam, delta);
+      if (lam > delta) {
+        ymul = lam / (lam + delta);
+      }
+      else {
+        ymul = 1.0;
+        printf ("*** bad delta  -- negative eeigenvalue!\n");
+      }
+      vvp (enew, evec, ediff, m);
+      enew[a] = 0;
+      y = asum (enew, m) / (double) (m - 1);
+      vsp (enew, enew, -y, m);
+      enew[a] = 0;
+      norme (enew, m);
+      for (k = 0; k < m; k++) {
+        printf ("%3d: ", k);
+        cc = ' ';
+        if (k == a)
+          cc = '*';
+        printf ("%c ", cc);
+        printf ("%9.3f %9.3f %9.3f", evec[k], ediff[k], enew[k]);
+        printnl ();
+      }
+      mulmat (ffvec, enew, mmat, 1, m, n);
+      y = asum2 (ffvec, n) / (double) n;
+      vst (ffvec, ffvec, 1.0 / sqrt (y), n);
+      copyarr (ffvecs, fxvecs, numeigs * n);
+      copyarr (ffvec, fxvecs + i * n, n);
+      if ((a == 3) && (i == 0))
+        cpr (ffvecs + i * n, ffvec, n);
+      doproj (ww, xindex[a], xsnplist, fxvecs, numeigs, n);
+      snew[i * m + a] = ww[i] * ymul;
+    }
+  }
+
+  for (j = 0; j < numeigs; j++) {
+    for (i = 0; i < numindivs; i++) {
+      t = findfirst (xindex, m, i);
+      if (t >= 0) {
+        ss[j * numindivs + i] = snew[j * m + t];
+        continue;
+      }
+    }
+  }
+
+/**
+   for (i=0; i<numindivs; i++) { 
+    t = findfirst(xindex, m, i) ;
+    if (t>=0) continue ;  
+    doproj(ww, i, xsnplist, ffvecs, numeigs, n) ;
+    for (j=0; j<numeigs; j++) {
+     ss[j*numindivs+i] = ww[i] ;
+    }
+   }
+*/
+
+  printf ("shrink output\n");
+  for (i = 0; i < numindivs; ++i) {
+    printf ("%3d: ", i);
+    for (j = 0; j < numeigs; j++) {
+      printf ("%9.3f ", ss[j * numindivs + i]);
+    }
+    printnl ();
+  }
+
+  printevecs (xsnplist, indivmarkers, indivmarkers,
+              numindivs, n, numindivs, numeigs, ss, lambda, ofile);
+
+
+
+  free (xmat);
+  free (evecs);
+  free (lambda);
+  free (dd);
+  free (dv1);
+  free (d);
+  free (ww);
+  free (w2);
+  free (sold);
+  free (snew);
+  free (enew);
+  free (ffvec);
+  free (ss);
+  free (ffvecs);
+  free (fxvecs);
+  printf ("doshrink exited\n");
+  fflush (stdout);
 }

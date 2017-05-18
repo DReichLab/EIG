@@ -1,14 +1,14 @@
 See ../README for high-level documentation of the entire EIGENSOFT package.
 
 This file contains documentation of EIGENSTRAT programs:
-  smartpca.pl: run PCA on input genotype data (calls smartpca)
-  smarteigenstrat.pl: run EIGENSTRAT stratification correction.  This program 
+  smartpca.perl: run PCA on input genotype data (calls smartpca)
+  smarteigenstrat.perl: run EIGENSTRAT stratification correction.  This program 
     supports all 5 file formats, and supports quantitative phenotypes.
-  gc.pl: apply Genomic Control (Devlin and Roeder, 1999) to the
+  gc.perl: apply Genomic Control (Devlin and Roeder, 1999) to the
     association statistics computed by EIGENSTRAT.
     
 We note that the programs eigenstrat and eigenstratQTL of EIGENSOFT version 2.0
-have been replaced by smarteigenstrat.pl.  However, we have retained the old
+have been replaced by smarteigenstrat.perl.  However, we have retained the old
 programs for backwards compatibility (see below).
 
 See ./example.perl and ./exampleQTL.perl for toy examples using our programs.
@@ -23,13 +23,13 @@ http://www.hsph.harvard.edu/faculty/alkes-price/files/eigensoftfaq.htm
 
 ------------------------------------------------------------------------
 
-DOCUMENTATION of smartpca.pl program:
+DOCUMENTATION of smartpca.perl program:
 
 This program calls the smartpca program (see ../POPGEN/README). 
 For this to work, the bin directory containing smartpca MUST be in your path. 
 See ./example.perl for a toy example.
 
-../bin/smartpca.pl
+../bin/smartpca.perl
 -i example.geno  : genotype file in any format (see ../CONVERTF/README)
 -a example.snp   : snp file in any format (see ../CONVERTF/README)
 -b example.ind   : indiv file in any format (see ../CONVERTF/README)
@@ -77,15 +77,15 @@ large correlations with phenotype indicate highly mismatched cases vs. controls
 
 ------------------------------------------------------------------------
 
-DOCUMENTATION of smarteigenstrat.pl program: [run smartpca.pl program first]
+DOCUMENTATION of smarteigenstrat.perl program: [run smartpca.perl program first]
 
 This program is a PERL wrapper which calls the C program smarteigenstrat. 
   Note: the bin directory containing smarteigenstrat MUST be in your path. 
   See ./example.perl for a toy example.
-We recommend smarteigenstrat.pl for users who prefer command-line flags.
+We recommend smarteigenstrat.perl for users who prefer command-line flags.
 However, users who prefer parameter files can run smarteigenstrat instead.
 
-../bin/smarteigenstrat.pl
+../bin/smarteigenstrat.perl
 -i example.geno : genotype file in any format (see ../CONVERTF/README)
 -a example.snp : snp file in any format (see ../CONVERTF/README)
 -b example.ind : individual file in any format (see ../CONVERTF/README).
@@ -97,7 +97,7 @@ However, users who prefer parameter files can run smarteigenstrat instead.
   should be real numbers.  The value -100.0 signifies "missing data".
   If -q is set to NO, these values should be "Case" or "Control".
   The default value for the -q parameter is NO.     
--p example.pca : input file of principal components (output of smartpca.pl)
+-p example.pca : input file of principal components (output of smartpca.perl)
 -k 1 : (Default is 10) number of principal components along which to
   correct for stratification.  Note that l must be less than or equal to
   the number of principal components reported in the file example.pca.
@@ -116,15 +116,15 @@ However, users who prefer parameter files can run smarteigenstrat instead.
     consider to be appropriate.
 -l example.log : standard output file
 
-The running time of smarteigenstrat.pl is very fast compared to
-  the running time of smartpca.pl.
+The running time of smarteigenstrat.perl is very fast compared to
+  the running time of smartpca.perl.
 
 ------------------------------------------------------------------------
 
 DOCUMENTATION of smarteigenstrat program:
 
 Users who prefer parameter files to command-line flags can run the
-C program smarteigenstrat instead of the PERL wrapper smarteigenstrat.pl.
+C program smarteigenstrat instead of the PERL wrapper smarteigenstrat.perl.
 The syntax of smarteigenstrat is "../bin/smarteigenstrat -p parfile"
 
 DESCRIPTION OF EACH PARAMETER in parameter file for smarteigenstrat:
@@ -137,7 +137,7 @@ outputname:       name of output file of chisq association statistics
 numeigs:          number of principal components to correct for
 qtmode:           YES for quantitative phenotype, NO (default) otherwise 
 
-For details, see documentation of smarteigenstrat.pl above.
+For details, see documentation of smarteigenstrat.perl above.
 
 OPTIONAL PARAMETERS:
 
@@ -148,9 +148,9 @@ hashcheck:    If set to YES and the input genotype file is in PACKEDANCESTRYMAP
 
 ------------------------------------------------------------------------
 
-DOCUMENTATION of gc.pl: [run smartpca.pl & smarteigenstrat.pl first]
+DOCUMENTATION of gc.perl: [run smartpca.perl & smarteigenstrat.perl first]
 
-../bin/gc.pl infile outfile
+../bin/gc.perl infile outfile
 infile is input file of chisq statistics produced by eigenstrat program.
   It contains both uncorrected and EIGENSTRAT statistics for each SNP.
 outfile is output file.  It lists
@@ -160,7 +160,7 @@ Computation of lambda is as described in Devlin and Roeder 1999.
 A lambda above 1 indicates inflation in chisq statistics.
 By definition, lambda is not allowed to be less than 1.
 
-Running time of the gc.pl program is very fast.
+Running time of the gc.perl program is very fast.
 
 ------------------------------------------------------------------------
 
@@ -179,7 +179,7 @@ our old program eigenstratQTL (for quantitative phenotypes) from that release,
 which have now been replaced by our new program smarteigenstratQTL.perl.  
 See ./example.oldstyle.perl for an example involving the eigenstrat program. 
 
-Most users will want to use our new program smarteigenstrat.pl, which has
+Most users will want to use our new program smarteigenstrat.perl, which has
 added functionality.  However, users wishing to understand or modify our 
 source code may find it advantageous to instead work with the simpler 
 eigenstrat programs.
@@ -190,10 +190,10 @@ BACKWARDS COMPATIBILITY with 07/23/06 EIGENSTRAT release: pca program
 
 For backwards compatibility with the 07/23/06 EIGENSTRAT release, we have also
 included our old program pca used in that release, which has now been replaced
-by our new program smartpca.pl.  See ./example.oldstyle.perl for an example
+by our new program smartpca.perl.  See ./example.oldstyle.perl for an example
 involving the pca program. 
 
-Most users will want to use our new program smartpca.pl, which calls
+Most users will want to use our new program smartpca.perl, which calls
 the smartpca program and has added functionality.  However, users wishing
 to understand or modify our source code may find it advantageous to instead
 work with the simpler pca program.
@@ -232,7 +232,7 @@ Thus, if running on much smaller data sets, it is necessary to exclude a
 candidate marker from the set of markers used to infer principal components
 used to correct for stratification at the candidate marker.  In the case of
 a data set which uses ancestry-informative markers to infer ancestry, a
-good way to do this is to run smartpca.pl to infer principal components 
+good way to do this is to run smartpca.perl to infer principal components 
 *only* using ancestry-informative markers, excluding the candidate markers 
 (and excluding any ancestry-informative marker in LD with a candidate marker),
 and then run eigenstrat on candidate markers.

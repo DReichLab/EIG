@@ -1,4 +1,4 @@
-Copyright (c) 2006-2016, Broad Institute, Inc. and Harvard Medical School
+Copyright (c) 2009-2016, Broad Institute, Inc.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -16,7 +16,7 @@ this list of conditions and the following disclaimer.
 
 
 *
- Neither the name Broad Institute, Inc. Harvard University, nor the names of its
+ Neither the name Broad Institute, Inc. nor the names of its
  contributors may be used to endorse or promote products derived from
  this software without specific prior written permission.
 

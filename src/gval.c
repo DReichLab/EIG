@@ -42,45 +42,42 @@ setgval (SNP ** xsnps, int nrows, Indiv ** indivmarkers, int numindivs,
   xnumindivs = numindivs;
   xxindex = xindex;
 
-  for (i = 1; i < nrows; i++)
-    {
-      if (xxindex[i] < xxindex[i - 1])
-        {
-          fprintf (stderr, "xindex not sorted\n");
-          exit (1);
-        }
+  for (i = 1; i < nrows; i++) {
+    if (xxindex[i] < xxindex[i - 1]) {
+      fprintf (stderr, "xindex not sorted\n");
+      exit (1);
     }
+  }
 
-  ZALLOC(cc, nrows, double);
-  ZALLOC(xmean, ncols, double);
-  ZALLOC(xfancy, ncols, double);
+  ZALLOC (cc, nrows, double);
+  ZALLOC (xmean, ncols, double);
+  ZALLOC (xfancy, ncols, double);
   vclear (xfancy, 1.0, ncols);
   gtable = initarray_2Ddouble (ncols, 4, 0);
 
-  for (i = 0; i < ncols; ++i)
-    {
-      col = i;
-      cupt = xsnps[i];
+  for (i = 0; i < ncols; ++i) {
+    col = i;
+    cupt = xsnps[i];
+
       /**
        if (i>=0) {
        printf("zz: %d %s\n", cupt -> ID) ;  fflush(stdout) ;
        }
        */
-      getcolxz (cc, cupt, xindex, xtypes, nrows, i, xmean, xfancy, &n0, &n1);
+    getcolxz (cc, cupt, xindex, xtypes, nrows, i, xmean, xfancy, &n0, &n1);
 
-      mean = xmean[col] / xfancy[col];
-      for (k = 0; k < 3; ++k)
-        {
-          y = ((double) k) - mean;
-          y *= xfancy[col];
-          gtable[col][k] = y / sqrt (2.0);
-        }
-      gtable[col][3] = 0;
-
-      t = MIN(n0, n1);
-      if (t == 0)
-        cupt->ignore = YES;	// side-effect
+    mean = xmean[col] / xfancy[col];
+    for (k = 0; k < 3; ++k) {
+      y = ((double) k) - mean;
+      y *= xfancy[col];
+      gtable[col][k] = y / sqrt (2.0);
     }
+    gtable[col][3] = 0;
+
+    t = MIN (n0, n1);
+    if (t == 0)
+      cupt->ignore = YES;       // side-effect
+  }
 
   free (cc);
 }
@@ -148,8 +145,7 @@ getggval (int indindx, int col, double *val)
 #define U3(n) U2(n), U2((n) + 16), U2((n) + 32), U2((n) + 48)
 
 // the unpacking table
-static const uint8_t UL[256][4] =
-  { U3(0), U3(64), U3(128), U3(192) };
+static const uint8_t UL[256][4] = { U3 (0), U3 (64), U3 (128), U3 (192) };
 
 size_t
 get_nrows ()
@@ -175,25 +171,23 @@ kjg_geno_get_normalized_row (const size_t snp_index, double *y)
   double *norm_lookup = gtable[snp_index];
 
   size_t i = 0, j = xxindex[i];
-  while (1)
-    {
-      size_t k = j / 4;          // packed location
-      size_t jf = (k + 1) * 4;   // last index in packed location
+  while (1) {
+    size_t k = j / 4;           // packed location
+    size_t jf = (k + 1) * 4;    // last index in packed location
 
-      uint8_t p = packed[k];     // packed data
-      const uint8_t* u = UL[p];  // unpacked data
+    uint8_t p = packed[k];      // packed data
+    const uint8_t *u = UL[p];   // unpacked data
 
-      while (j < jf)
-        {
-          size_t o = j % 4;      // offset in packed data
-          size_t t = u[o];       // unpacked data
-          y[i] = norm_lookup[t]; // normalized data
+    while (j < jf) {
+      size_t o = j % 4;         // offset in packed data
+      size_t t = u[o];          // unpacked data
+      y[i] = norm_lookup[t];    // normalized data
 
-          if (++i == xnrows)     // move onto next entry
-            return;              // break if we are done with SNP
-          j = xxindex[i];        // perform the lookup
-        }
+      if (++i == xnrows)        // move onto next entry
+        return;                 // break if we are done with SNP
+      j = xxindex[i];           // perform the lookup
     }
+  }
 }
 
 /**
@@ -206,10 +200,9 @@ size_t
 kjg_geno_get_normalized_rows (const size_t i, const size_t r, double *Y)
 {
   size_t j;
-  for (j = i; j < i + r && j < xncols; j++)
-    {
-      kjg_geno_get_normalized_row (j, Y);
-      Y += xnrows;
-    }
+  for (j = i; j < i + r && j < xncols; j++) {
+    kjg_geno_get_normalized_row (j, Y);
+    Y += xnrows;
+  }
   return (j - i);
 }

@@ -1,5 +1,6 @@
-CFLAGS += -I../include
-LDLIBS += -lgfortran -lrt -Wl,-Bstatic -lgsl -lopenblas -Wl,-Bdynamic -fopenmp
+override CFLAGS += -I../include -I/usr/include/openblas
+#LDLIBS += -lgsl -lopenblas -lrt -lm
+override LDLIBS += -lgsl -lopenblas -lm -lpthread
 
 ifeq ($(OPTIMIZE), 1)
 	CFLAGS += -O2
@@ -22,7 +23,7 @@ NLIB = $(ND)/libnick.a
 # ----- phony targets
 .PHONY: all clean clobber install
 
-EXE = baseprog convertf mergeit pca pcaselection \
+EXE = baseprog convertf mergeit pca smshrink \
 	$(ED)/pcatoy $(ED)/smartrel $(ED)/smarteigenstrat \
 	$(ED)/twstats $(ED)/eigenstrat $(ED)/eigenstratQTL $(ED)/smartpca
 
@@ -32,12 +33,12 @@ install:  all
 	mv $(EXE) ../bin
 
 clobber:
-	rm -f *.o */*.o */*.a
+	rm -f *.o */*.o */*.a $(ND)/*.o $(ED)/*.o $(KD)/*.o
 	rm -f $(EXE)
 	cd ../bin/ ; rm -f $(notdir $(EXE)) ; cd ../src
 
 clean:
-	rm -f *.o core core.* *.o  
+	rm -f *.o core core.* *.o $(ND)/*.o $(ED)/*.o $(KD)/*.o $(EXE)
 
 # ----- build nicksrc/libnick.a
 $(NLIB):
@@ -49,9 +50,7 @@ convertf:	convertf.o mcio.o egsubs.o admutils.o h2d.o $(ED)/exclude.o $(NLIB)
 
 mergeit:	mergeit.o mcio.o admutils.o $(NLIB)
 
-pca:	pca.o $(ED)/eigsubs.o eigx.o $(NLIB)
-
-pcaselection:	pcaselection.o mcio.o admutils.o $(NLIB)
+pca:	pca.o $(ED)/eigsubs.o eigensrc/eigx.o $(NLIB)
 
 $(ED)/pcatoy: 	$(ED)/pcatoy.o eigensrc/eigsubs.o eigensrc/eigx.o $(NLIB)
 
@@ -62,27 +61,21 @@ $(ED)/smarteigenstrat:	$(ED)/smarteigenstrat.o mcio.o admutils.o $(NLIB)
 
 $(ED)/twstats:	$(ED)/twstats.o $(NLIB) 
 
-$(ED)/eigenstrat:	$(ED)/eigenstrat.o 
+#$(ED)/eigenstrat:	$(ED)/eigenstrat.o 
 
-$(ED)/eigenstratQTL:	$(ED)/eigenstratQTL.o 
+#$(ED)/eigenstratQTL:	$(ED)/eigenstratQTL.o 
 
 $(ED)/smartpca:	$(ED)/smartpca.o $(ED)/eigsubs.o $(ED)/exclude.o $(ED)/smartsubs.o $(ED)/eigx.o \
-		twsubs.o mcio.o qpsubs.o admutils.o egsubs.o regsubs.o gval.o \
+		mcio.o qpsubs.o admutils.o egsubs.o regsubs.o gval.o \
 		$(NLIB) \
-          	$(KD)/kjg_fpca.o $(KD)/kjg_gsl.o
+          	$(KD)/kjg_fpca.o $(KD)/kjg_gsl.o 
+          	#-lpthread
 
 smshrink:		smshrink.o $(ED)/eigsubs.o $(ED)/exclude.o $(ED)/smartsubs.o $(ED)/eigx.o \
 		twsubs.o mcio.o qpsubs.o admutils.o egsubs.o regsubs.o gval.o \
 		$(NLIB) \
           	$(KD)/kjg_fpca.o $(KD)/kjg_gsl.o
 
-smartpca: $(ED)/smartpca
-	cp $< $@
+#smartpca: $(ED)/smartpca
+	#cp $< $@
 
-$(ED)/fffpca:	$(ED)/fffpca.o $(ED)/eigsubs.o $(ED)/exclude.o $(ED)/smartsubs.o $(ED)/eigx.o \
-		twsubs.o mcio.o qpsubs.o admutils.o egsubs.o regsubs.o gval.o \
-		$(NLIB) \
-          	$(KD)/kjg_fpca.o $(KD)/kjg_gsl.o
-
-fffpca: $(ED)/fffpca
-	cp $< $@

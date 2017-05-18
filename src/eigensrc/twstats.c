@@ -1,9 +1,9 @@
 #include  <stdio.h>
 #include <string.h>
-#include <math.h>  
+#include <math.h>
 
 #include <nicklib.h>
-#include <getpars.h> 
+#include <getpars.h>
 
 int verbose = NO;
 double nval = -1;
@@ -14,12 +14,12 @@ char *oname = NULL;
 
 char *twxtab = NULL;
 
-void
-readcommands (int argc, char **argv);
+void readcommands (int argc, char **argv);
 
-#define VERSION    "1000"  
+#define VERSION    "1000"
 
 int minleneig = 10;
+
 
 int
 main (int argc, char **argv)
@@ -41,7 +41,7 @@ main (int argc, char **argv)
   if (iname == NULL)
     fatalx ("i paraameter compulsory\n");
   nlambda = numlines (iname);
-  ZALLOC(lambda, nlambda, double);
+  ZALLOC (lambda, nlambda, double);
   xx[0] = lambda;
   nlambda = getxx (xx, nlambda, 1, iname);
   vst (lambda, lambda, -1.0, nlambda);
@@ -55,30 +55,27 @@ main (int argc, char **argv)
   fprintf (ofile, " %9s", "effect. n");
   fprintf (ofile, "\n");
 
-  for (i = 0; i < m; ++i)
-    {
+  for (i = 0; i < m; ++i) {
 
-      zn = nval;
-      tail = dotwcalc (lambda + i, m - i, &tw, &zn, &zvar, minleneig);
-      fprintf (ofile, "%4d  %12.6f", i + 1, lambda[i]);
-      if (i == 0)
-        fprintf (ofile, "%12s", "NA");
-      else
-        fprintf (ofile, "%12.6f", lambda[i] - lambda[i - 1]);
-      if (tail >= 0.0)
-        fprintf (ofile, " %9.3f %12.6g", tw, tail);
-      else
-        fprintf (ofile, " %9s %12s", "NA", "NA");
-      if (zn > 0.0)
-        {
-          fprintf (ofile, " %9.3f", zn);
-        }
-      else
-        {
-          fprintf (ofile, " %9s", "NA");
-        }
-      fprintf (ofile, "\n");
+    zn = nval;
+    tail = dotwcalc (lambda + i, m - i, &tw, &zn, &zvar, minleneig);
+    fprintf (ofile, "%4d  %12.6f", i + 1, lambda[i]);
+    if (i == 0)
+      fprintf (ofile, "%12s", "NA");
+    else
+      fprintf (ofile, "%12.6f", lambda[i] - lambda[i - 1]);
+    if (tail >= 0.0)
+      fprintf (ofile, " %9.3f %12.6g", tw, tail);
+    else
+      fprintf (ofile, " %9s %12s", "NA", "NA");
+    if (zn > 0.0) {
+      fprintf (ofile, " %9.3f", zn);
     }
+    else {
+      fprintf (ofile, " %9s", "NA");
+    }
+    fprintf (ofile, "\n");
+  }
   return 0;
 }
 
@@ -90,45 +87,43 @@ readcommands (int argc, char **argv)
   char *parname = NULL;
   phandle *ph;
 
-  while ((i = getopt (argc, argv, "i:o:p:n:m:t:V")) != -1)
-    {
+  while ((i = getopt (argc, argv, "i:o:p:n:m:t:V")) != -1) {
 
-      switch (i)
-        {
+    switch (i) {
 
-        case 'i':
-          iname = strdup (optarg);
-          break;
+    case 'i':
+      iname = strdup (optarg);
+      break;
 
-        case 'o':
-          oname = strdup (optarg);
-          break;
+    case 'o':
+      oname = strdup (optarg);
+      break;
 
-        case 't':
-          twxtab = strdup (optarg);
-          break;
+    case 't':
+      twxtab = strdup (optarg);
+      break;
 
-        case 'n':
-          nval = atof (optarg);
-          break;
+    case 'n':
+      nval = atof (optarg);
+      break;
 
-        case 'm':
-          minleneig = atoi (optarg);
-          break;
+    case 'm':
+      minleneig = atoi (optarg);
+      break;
 
-        case 'p':
-          parname = strdup (optarg);
-          break;
+    case 'p':
+      parname = strdup (optarg);
+      break;
 
-        case 'V':
-          verbose = YES;
-          break;
+    case 'V':
+      verbose = YES;
+      break;
 
-        case '?':
-          printf ("Usage: bad params.... \n");
-          fatalx ("bad params\n");
-        }
+    case '?':
+      printf ("Usage: bad params.... \n");
+      fatalx ("bad params\n");
     }
+  }
 
   if (parname == NULL)
     return;
@@ -145,4 +140,3 @@ readcommands (int argc, char **argv)
   closepars (ph);
 
 }
-

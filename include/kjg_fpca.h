@@ -19,8 +19,7 @@ extern size_t KJG_FPCA_ROWS;	// number of rows to process at once
  * @param I iterations to do exponentiation
  */
 
-void
-kjg_fpca (size_t K, size_t L, size_t I, double *eval, double *evec);
+void kjg_fpca (size_t K, size_t L, size_t I, double *eval, double *evec);
 
 /** Multiplies B=X*A1 and A2 = XT*B = XT*X*A1
  * @param *A1 some matrix
@@ -28,23 +27,20 @@ kjg_fpca (size_t K, size_t L, size_t I, double *eval, double *evec);
  * @param *A2 next matrix
  */
 
-void
-kjg_fpca_XTXA (const gsl_matrix * A1, gsl_matrix * B, gsl_matrix * A2);
+void kjg_fpca_XTXA (const gsl_matrix * A1, gsl_matrix * B, gsl_matrix * A2);
 
 /** Multiplies B = X*A
  * @param *A some matrix
  * @param *B another matrix
  */
 
-void
-kjg_fpca_XA (const gsl_matrix * A, gsl_matrix * B);
+void kjg_fpca_XA (const gsl_matrix * A, gsl_matrix * B);
 
 /** Multiplies A = XT*B
  * @param *B some matrix
  * @param *A another matrix
  */
 
-void
-kjg_fpca_XTB (const gsl_matrix * B, gsl_matrix * A);
+void kjg_fpca_XTB (const gsl_matrix * B, gsl_matrix * A);
 
 #endif /* KJG_FPCA_H_ */
