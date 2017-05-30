@@ -46,12 +46,16 @@ On Mac OSX, you can install gsl and OpenBLAS with lapack using homebrew:
 "brew install homebrew/science/openblas"
 
 If these packages are not in standard directories, you can specify the 
-appropriate include and library directories with the CFLAGS and LDLIBS 
+appropriate include and library directories with the CFLAGS and LDFLAGS 
 make variables. 
 For example, on the Harvard Medical School O2 cluster, the command is:
-'make CFLAGS="-I/n/app/openblas/0.2.19/include -I/n/app/gsl/2.3/include" LDLIBS="-L/n/app/openblas/0.2.19/lib -L/n/app/gsl/2.3/lib/"'
+'make CFLAGS="-I/n/app/openblas/0.2.19/include -I/n/app/gsl/2.3/include" LDFLAGS="-L/n/app/openblas/0.2.19/lib -L/n/app/gsl/2.3/lib/"'
 On Mac OSX:
 'make CFLAGS="-I/usr/local/opt/openblas/include -I/usr/local/opt/gsl/include" LDFLAGS="-L/usr/local/opt/openblas/lib -L/usr/local/opt/gsl/lib"'
+
+If you have issues with missing lapacke symbols, for example "undefined reference to `LAPACKE_dlange'", run make with the corresponding additional libraries linked:
+'make LDLIBS="-llapacke"'
+This has been encountered on Linux Mint 18. 
 
 If you have trouble compiling and running our code, try compiling and
 running the pcatoy program in the src directory:
