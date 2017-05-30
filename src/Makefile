@@ -1,6 +1,6 @@
 override CFLAGS += -I../include -I/usr/include/openblas
 #LDLIBS += -lgsl -lopenblas -lrt -lm
-override LDLIBS += -lgsl -lopenblas -lm -lpthread
+override LDLIBS += -lgsl -lopenblas -lm -lpthread -llapacke
 
 ifeq ($(OPTIMIZE), 1)
 	CFLAGS += -O2
