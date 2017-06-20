@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 
 $P = $ARGV[0];
 $out = $ARGV[1];
