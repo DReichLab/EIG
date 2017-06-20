@@ -1,7 +1,7 @@
 #include <ctype.h>
 #include <nicklib.h>
 #include <xsearch.h>
-#define IDSIZE 40
+#define IDSIZE 120
 
 #ifndef ADMUTILS
 

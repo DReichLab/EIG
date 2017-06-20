@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 
 # perl wrapper for smarteigenstrat program.  Run smarteigenstrat.perl with no options for usage
 

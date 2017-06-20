@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 
 ### translate .evec file to .pca file expected by eigenstrat program
 ### Note: .evec file does not contain entries for outliers

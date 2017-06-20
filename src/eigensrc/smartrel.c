@@ -80,7 +80,7 @@ pubmean added
 
 #define MAXFL  50
 #define MAXSTR  512
-#define MAXPOPS 100
+#define MAXPOPS 1000
 
 char *parname = NULL;
 char *twxtabname = NULL;
