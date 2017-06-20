@@ -69,10 +69,6 @@ $(ED)/smarteigenstrat:	$(ED)/smarteigenstrat.o mcio.o admutils.o $(NLIB)
 
 $(ED)/twstats:	$(ED)/twstats.o $(NLIB) 
 
-#$(ED)/eigenstrat:	$(ED)/eigenstrat.o 
-
-#$(ED)/eigenstratQTL:	$(ED)/eigenstratQTL.o 
-
 $(ED)/smartpca:	$(ED)/smartpca.o $(ED)/eigsubs.o $(ED)/exclude.o $(ED)/smartsubs.o $(ED)/eigx.o \
 		mcio.o qpsubs.o admutils.o egsubs.o regsubs.o gval.o \
 		$(NLIB) \
@@ -83,7 +79,4 @@ smshrink:		smshrink.o $(ED)/eigsubs.o $(ED)/exclude.o $(ED)/smartsubs.o $(ED)/ei
 		twsubs.o mcio.o qpsubs.o admutils.o egsubs.o regsubs.o gval.o \
 		$(NLIB) \
           	$(KD)/kjg_fpca.o $(KD)/kjg_gsl.o
-
-#smartpca: $(ED)/smartpca
-	#cp $< $@
 
