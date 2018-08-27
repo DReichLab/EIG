@@ -72,11 +72,10 @@ Executables and source code:
 All C executables are in the bin/ directory.
 
 We have placed source code for all C executables in the src/ directory, 
-for users who wish to modify and recompile our programs.  For example, to
-recompile the eigenstrat program, type
+for users who wish to modify and recompile our programs.
 "cd src"
-"make eigenstrat"      
-"mv eigenstrat ../bin"
+"make"      
+"make install"
 
 Note that some of our software will only compile if your system has the
 GSL + lapack + OpenBLAS packages installed.
