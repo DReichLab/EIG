@@ -82,7 +82,7 @@ GSL + lapack + OpenBLAS packages installed.
 
 On Mac OSX, you can install gsl and OpenBLAS with lapack using homebrew:
 "brew install gsl"
-"brew install homebrew/science/openblas"
+"brew install openblas"
 
 If these packages are not in standard directories, you can specify the 
 appropriate include and library directories with the CFLAGS and LDFLAGS 
