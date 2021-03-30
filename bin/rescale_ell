@@ -1,0 +1,90 @@
+#!/usr//bin/perl  -w 
+
+## rescale -i infile -o outfile -a inscale -b outscale 
+
+use Getopt::Std ;
+use File::Basename ;
+
+## pops : separated  -x = make postscript and pdf  -z use another separator
+##  -k keep intermediate files
+## NEW if pops is a file names are read one per line
+## scaling on x, y axes 
+
+getopts('i:o:a:s:',\%opts) ;
+$infile = $opts{"i"} ; 
+$outfile = $opts{"o"} ; 
+$inscalex = $opts{"a"} ; 
+$outscale = $opts{"s"} ; 
+
+$inscale = 0.95 ; 
+
+$inscale = $inscalex  if (defined $inscalex) ; 
+
+usage() unless (defined $infile) ;
+usage() unless (-r $infile) ;
+usage() unless (defined $outfile) ;
+usage() unless (defined $outscale) ;
+
+open (I1, "$infile")  ;     
+open (YY, ">$outfile") || die "can't open $outfile\n"  ;     
+
+$lnum = $junk = -99 ; 
+foreach $line (<I1>) { 
+ chomp $line ; 
+ ($a, $b, , $c, @Z)  = split " ", $line ; 
+ next unless (defined $b) ; 
+ 
+ if ($a =~ /sample:/) { 
+  $lnum = 0 ; 
+  $L[0] = $line ; 
+  next ; 
+ }
+ if ($lnum<0) { 
+  $inscale = $a ; 
+  printf YY "%9.3f ::  %s\n", $outscale, $c ;  
+  next ; 
+ }
+ ++$lnum ;
+ $L[$lnum] = $line ; 
+ if ($a =~ /ellcoords:/) { 
+  $inscale = pop @Z unless (defined $inscalex) ; 
+  $fac2 = critchi($outscale)/critchi($inscale) ;
+  $fac =  sqrt($fac2) ;
+
+  print YY "$L[0]\n" ; 
+  print YY "$L[1]\n" ; 
+  print YY "$L[2]\n" ; 
+  ($a, $b) = split " ", $L[3] ; $a *=  $fac2; $b *= $fac2 ;  printf YY "%15.9f %15.9f\n", $a, $b ; 
+  ($a, $b) = split " ", $L[4] ; $a *=  $fac2; $b *= $fac2 ;  printf YY "%15.9f %15.9f\n", $a, $b ; 
+  ($junk, $a, $b, $c, $d, $e) = split " ", $line ;
+  print YY "$junk $a $b " ; 
+  $c *= $fac ; 
+  $d *= $fac ; 
+  printf YY "%15.9f ", $c ;
+  printf YY "%15.9f ", $d ;
+  printf YY "%15.9f ", $e ;
+  printf YY ":: %9.3f\n", $outscale ;
+  next ; 
+ }
+}
+close YY ;
+
+
+sub critchi { 
+## critical value for chisq 2 dof
+ my ($scale) = @_ ; 
+ local $x ; 
+ 
+ $x = -2*log(1-$scale) ;
+ ## printf "zz %12.6f %12.6f\n", $scale, $x ;
+
+ return $x ;
+
+}
+
+sub usage { 
+ 
+print "rescale_ell -i infile -o outfile -s outscale [-a inscale]\n"  ; 
+exit 0 ; 
+
+}

@@ -4,6 +4,9 @@ general documentation of the smartpca program, see README in this directory.
 Parameter values: smartpca prints basic info on parameter values used.
 
 Outliers: smartpca prints a list of outlier individuals removed, if any.
+ Especially in population genetic studies you may not wish for 
+outliers to be removed.  Code
+numoutliter:  0   
 
 Tracy-Widom statistics: the column of interest is the "p-value" column which
   indicates the statistical significance of each principal component.

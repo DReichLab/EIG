@@ -1,4 +1,3 @@
-#include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -26,13 +25,13 @@
 
 /** 
  Most of this code written by Nick Patterson 
- (Broad institute and Harvard Medical)
- Some improvements and elimination of FORTRAN code by Chris Chang (BGI) 
+ (Broad institute, Harvard Medical, Harvard Evolutionary Biology)
+ Improvements and elimination of FORTRAN code by Chris Chang (BGI) 
 
  Code added to support grm output + improved ld rregression by Alexander Gusev 
 */
 
-#define WVERSION   "16000" 
+#define WVERSION   "18140"
 
 /** 
 Simple eigenvector analysis
@@ -96,11 +95,14 @@ pubmean added
 
 fst on X
 fst std errors now fixed
+s. dev -> std. err. in legend 
 
 bad bug fixed (outfiles changed indivmarkers)  ...  
 
 fstdetailsname added
 fsthiprecision added
+fstsnpout switch added 
+
 bug fixed  (getrawcolx)
 
 bad bug fix.  xtypes not allocated correctly
@@ -130,6 +132,13 @@ hiprec option added (for eigenvector output)
 fastshrink added (Edgar Dobriban) 
 
 fstz code added (lower triangle is Z scores) 
+
+O2 version.  some extra declarations;  cputime and calcmem called
+new estimation of effective number of snps
+topright added -- flips top 2 eigenvectors if wanted
+dotpopsmode NO default
+fstnum added
+megaoutname added (mega output)
 */
 
 #include <pthread.h>
@@ -149,20 +158,26 @@ int qtmode = NO;
 Indiv **indivmarkers;
 SNP **snpmarkers;
 
+int shrinkp_done = NO ; 
+
 int numsnps, numindivs;
 int numeigs = 10;               /// default
 int markerscore = NO;
-int maxpops = 100;
+int maxpops = -1;
 long seed = 0;
 int chisqmode = NO;             // approx p-value better to use F-stat
 int missingmode = NO;
 int shrinkmode = NO;
+int readparsonly = NO ; 
+int newshrink = NO;
 int fastshrink = NO ;
 int autoshrink = NO  ; 
 double autothresh = .01 ;  // TW test threshold for significant eigenvalue
-int dotpopsmode = YES;
+int mpshrink = NO ; 
+int dotpopsmode = NO;
 int noxdata = YES;              /* default as pop structure dubious if Males and females */
 int fstonly = NO;
+int fstjack = YES ;
 int pcorrmode = NO;
 int pcpopsonly = YES;
 int nostatslim = 10;
@@ -172,6 +187,7 @@ int altnormstyle = YES;         // affects subtle details in normalization formu
 int minallelecnt = 1;
 int maxmissing = 9999999;
 int lopos = -999999999, hipos = 999999999;      // use with xchrom
+int fstverbose = NO ; 
 
 int packout = -1;
 extern enum outputmodetype outputmode;
@@ -189,13 +205,22 @@ int easymode = NO;
 int fastmode = NO;
 int fastdim = -1;
 int fastiter = -1;
-int regmode = NO;
+int regmode = YES;
+int doproject = YES  ;  // No => poplistname pops only projected
 
 int numoutliter = 5, numoutleigs = 10, outliermode = 0;
 double outlthresh = 6.0;
 OUTLINFO **outinfo;
 char *outinfoname = NULL;
 char *fstdetailsname = NULL;
+char *elloutname = NULL ; 
+char *megaoutname = NULL ; 
+double ellconf = -1 ; 
+int fstsnpout = NO ; 
+
+double *XTX = NULL ; 
+int nrxtx = -1 ; 
+int *flip = NULL ; 
 
 
 double plo = .001;
@@ -224,6 +249,20 @@ char *grmoutname = NULL;
 int grmbinary = NO;
 double blgsize = 0.05;          // block size in Morgans */
 char *id2pops = NULL;
+char *elllistname = NULL ; 
+int nellindivs = 0 ; 
+char **elllist ; 
+int *ellindex ; 
+Indiv **ellindivs ;  
+
+int nblocks, xnblocks;
+int *blstart, *blsize;
+
+int printcover = NO ;
+
+char *topright = NULL ; 
+int  toprightindex = -1 ;
+
 
 double r2thresh = -1.0;
 double r2genlim = 0.01;         // Morgans 
@@ -235,6 +274,8 @@ double nhwfilter = -1.0;
 
 double *xmean, *xfancy;
 double *edgarw = NULL  ;  
+
+int rounakmode = NO ; 
 
 int thread_ct_config = 0;
 
@@ -307,6 +348,7 @@ void printxcorr (double *X, int nrows, Indiv ** indxx);
 
 void fixrho (double *a, int n);
 void printdiag (double *a, int n);
+void countsn(int *blcnt, int nblocks, SNP **snplist, int nsnps, int ind)  ;
 
 int
 ridoutlier (double *evecs, int n, int neigs,
@@ -322,6 +364,10 @@ double oldfstcol (double *estn, double *estd, SNP * cupt,
                   int *xindex, int *xtypes, int nrows, int type1, int type2);
 
 void jackrat (double *xmean, double *xsd, double *top, double *bot, int len);
+void lsqproj(int blocknum, SNP **xsnplist, int ncols, Indiv **xindlist, int nind, 
+  double *fxscal, double *ffvecs, double * acoeffs, double *bcoeffs, int *xtypes, int numeg) ;
+void seteigscale(double *eigscale, double *acoeffs, double *bcoeffs, int *xindex, int nrows, int numeigs)  ;
+
 void domult_increment_lookup (pthread_t * threads, uint32_t thread_ct,
                               double *XTX_lower_tri, double *tblock,
                               uintptr_t * binary_cols,
@@ -333,7 +379,7 @@ void domult_increment_normal (pthread_t * threads, uint32_t thread_ct,
                               int marker_ct, uint32_t indiv_ct);
 void writesnpeigs (char *snpeigname, SNP ** xsnplist, double *ffvecs,
                    int numeigs, int ncols);
-void dofstxx (double *fstans, double *fstsd, SNP ** xsnplist, int *xindex,
+void dofstxx (double *fstmean, double *fstans, double *fstsd, int *fstnum, SNP ** xsnplist, int *xindex,
               int *xtypes, int nrows, int ncols, int numeg, double blgsize,
               SNP ** snpmarkers, Indiv ** indm);
 void fixwt (SNP ** snpm, int nsnp, double val);
@@ -346,9 +392,13 @@ void printevecs (SNP ** snpmarkers, Indiv ** indivmarkers, Indiv ** xindlist,
                  int numeigs, double *eigenvecs, double *eigenvals,
                  FILE * ofile);
 
-void doshrinkp (double *mmat, int m, int n, int *xindex, SNP ** xsnplist);
-void estedgar(double *edgarw, double *lambdav, int lentop, int lenspec, double gamm) ;
+void doshrinkp (double *mmat, int m, int n, int *xindex, SNP ** xsnplist, double *xcoeffs) ;
+void estedgar(double *edgarw, double *lambdav, int lentop, int lenspec, double gamm, double yjfac) ;
 int setnstw(double *lambda, int len, int nostatslim) ;
+void kjg_fpca (size_t K, size_t L, size_t I, double *eval, double *evec) ;
+
+int mpestimate(double *eigs, int neigs, double *peffect, double *psigma) ; 
+void printmega(char *outname, char **eglist, int numeg, double *fstsc) ;
 
 uint32_t
 triangle_divide (int64_t cur_prod, int32_t modif)
@@ -490,26 +540,29 @@ main (int argc, char **argv)
   char sss[MAXSTR];
   char **eglist;
   int numeg;
-  int i, j, k, k1, k2, pos;
+  int i, j, jj, k, k1, k2, pos;
+  int a, b, bl ;
   int *vv;
   SNP *cupt;
   Indiv *indx;
-  double y1 = 0, y2, y2l, y, y3;
+  double y1 = 0, y2, y2l, y, y3, ymem, yjfac;
 
   int n0, n1, nkill;
 
-  int nindiv = 0;
+  int nindiv = 0, nindignore ;
   double ychi, tail, tw;
   int nignore, numrisks = 1;
   double *xrow, *xpt;
+  double **xrowb ; 
   SNP **xsnplist;
   Indiv **xindlist;
   int *xindex, *xtypes = NULL;
   int nrows, ncols, m, nused;
-  double *XTX, *cc, *evecs, *ww, *evals;
+  double  *cc, *evecs, *ww, *evals;
   double *partial_sum_lookup_buf = NULL;
   double *lambda, *esize;
-  double zn, zvar, zp, zfp, zfn;
+  int **blcnt ; 
+  double zn, zvar, zp, zfn, zfp;
   double *fvecs, *fxvecs, *fxscal;
   double *ffvecs;
   int weightmode = NO;
@@ -520,17 +573,25 @@ main (int argc, char **argv)
   int lastldchrom, numld;
   double *fstans, *fstsd, *fstzz;
   double *inbans, *inbsd;
+  int *fstnum ; 
 
   int chrom;
   int outliter, numoutiter, *badlist, nbad;
   FILE *outlfile, *phylipfile;
   double *eigkurt, *eigindkurt;
-  double *wmean;
+  double *wmean, *emean ;
   char **elist;
   double *mmat;
+
   double *trow = NULL, *rhs = NULL, *emat = NULL, *regans = NULL;
+  double *eigscale = NULL ;
+  double *eigscmat ;  // scaling matrix for lsqproj
+
   int kk;
-  double *acoeffs, *bcoeffs, *apt, *bpt, *azq, *bzq;
+  double *acoeffs, *bcoeffs, *xcoeffs = NULL ;
+  double **aellc , **bellc ;  
+  double *aco, *bco ;
+  double *awk, *bwk ;
   int rngmode = NO;
 
 
@@ -547,12 +608,39 @@ main (int argc, char **argv)
   uint32_t thread_ct;
 
   int numshrink ; // set by autoshrink 
-  double fstzsc ;
+  double fstzsc, *fstmean ;
+
+  double zeffect, zsigma ; // for MP estimation
+
+  double *jwt, *vest, *var ; 
+  double **jmean, **vvest, **vvar ; 
+  double zval, za1, za2; 
+  double zlambda[2], zvecs[4], zangle ; 
+  double zzmean[2], zzvar[4], zzest[2] ; 
+
+  FILE *ellfile ;
+  int fnum ;  
 
   readcommands (argc, argv);
+
+  cputime(0) ;
+  calcmem(0) ;
+
+
   printf ("## smartpca version: %s\n", WVERSION);
+
+  if (readparsonly) { 
+   printf("terminating...\n") ;
+   return 0 ;
+  }
+  if (regmode == NO) printf("lsqproject off:  deprecated\n") ;
+  if (usepopsformissing && shrinkmode) { 
+    fatalx("usepopsformissing and shrinkmode together not supported\n") ;
+  }
+
   packmode = YES;
   setomode (&outputmode, omode);
+  setfstsnpout(fstsnpout) ; 
 
   if (parname == NULL)
     return 0;
@@ -565,6 +653,17 @@ main (int argc, char **argv)
     if (fastdim < 0)
       fastdim = 2 * numeigs;
     rngmode = YES;
+  }
+
+ if (newshrink) shrinkmode = YES ;
+
+ if (mpshrink) { 
+  fastshrink = YES ;
+  printf("mpshrink set!\n") ;
+ }
+
+  if (rounakmode) { 
+   fastshrink = YES ; 
   }
 
   if (autoshrink) { 
@@ -586,10 +685,14 @@ main (int argc, char **argv)
   }
 
 
+/**
   if (usepopsformissing) {
     printf ("usepopsformissing => easymode\n");
     easymode = YES;
   }
+*/
+
+  if (hiprec) printf("high precision evec output\n") ;
 
   if (deletesnpoutname != NULL) {       /* remove because snplog opens in append mode */
     char buff[256];
@@ -604,6 +707,8 @@ main (int argc, char **argv)
     numoutiter = 0;
     outputname = NULL;
     snpeigname = NULL;
+    if (fastmode) printf("*** no fastmode with fstonly!\n") ; 
+    fastmode = NO ;
   }
 
   if (fancynorm)
@@ -612,6 +717,8 @@ main (int argc, char **argv)
     printf ("no norm used\n\n");
   if (regmode)
     printf ("lsqproject used\n");
+  if (shrinkmode) printf("shrinkmode used\n") ; 
+  if (rounakmode) printf("rounakmode used\n") ; 
 
   nostatslim = MAX (nostatslim, 3);
 
@@ -629,6 +736,7 @@ main (int argc, char **argv)
 
   if (shrinkmode) {
     easymode = fastmode = NO;
+    altnormstyle = YES ;  // maybe bug if NO 
     printf ("shrinkmode set!\n");
   }
 
@@ -647,19 +755,39 @@ main (int argc, char **argv)
   k = getgenos (genotypename, snpmarkers, indivmarkers,
                 numsnps, numindivs, nignore);
 
+  if (elllistname != NULL) {
+    nellindivs = numlines(elllistname) ; 
+    ZALLOC (elllist, nellindivs, char *);
+    nellindivs = loadlist(elllist, elllistname) ; 
+    ZALLOC(ellindex, nellindivs, int) ; 
+    printf("nellindivs: %3d\n", nellindivs) ; 
+    printstrings(elllist, nellindivs) ; 
+    regmode = YES ;
+//  shrinkmode = NO ;
+    ZALLOC(ellindivs, nellindivs, Indiv *) ;
+  }
+  if (maxpops < 0) maxpops = MAXPOPS ; 
+  if (maxpops > MAXPOPS) { 
+   printf("maxpops: %d is large!\n", maxpops) ;
+  }
 
   if (poplistname != NULL) {
-    ZALLOC (eglist, numindivs, char *);
+    numeg = numlines(poplistname) ; 
+    ZALLOC (eglist, numeg, char *);
     numeg = loadlist (eglist, poplistname);
     seteglist (indivmarkers, numindivs, poplistname);
   }
   else {
     setstatus (indivmarkers, numindivs, NULL);
-    ZALLOC (eglist, MAXPOPS, char *);
+    ZALLOC (eglist, maxpops, char *);
     numeg = makeeglist (eglist, maxpops, indivmarkers, numindivs);
   }
   for (i = 0; i < numeg; i++) {
     /* printf("%3d %s\n",i, eglist[i]) ; */
+  }
+
+  if (topright != NULL) { 
+   toprightindex = indxstring(eglist, numeg, topright) ;
   }
 
   nindiv = 0;
@@ -694,6 +822,8 @@ main (int argc, char **argv)
       continue ;
     }
   }
+
+  tt = 0 ;
   for (i = 0; i < numsnps; i++) {
     cupt = snpmarkers[i];
     pos = nnint (cupt->physpos);
@@ -712,11 +842,13 @@ main (int argc, char **argv)
     if (cupt->ignore)
       continue;
     if (numvalidgtx (indivmarkers, cupt, YES) <= 1) {
-      printf ("nodata: %20s\n", cupt->ID);
+      ++tt ; 
+      if (verbose) printf ("nodata: %20s\n", cupt->ID);
       cupt->ignore = YES;
       logdeletedsnp (cupt->ID, "nodata", deletesnpoutname);
     }
   }
+  printf("snps deleted (nodata): %d.  deletesnpoutname: for details", tt) ;
 
   if (killr2) {
     nkill =
@@ -737,14 +869,33 @@ main (int argc, char **argv)
   ZALLOC (vv, numindivs, int);
   numvalidgtallind (vv, snpmarkers, numsnps, numindivs);
   for (i = 0; i < numindivs; ++i) {
+     indx = indivmarkers[i];
     if (vv[i] == 0) {
-      indx = indivmarkers[i];
       indx->ignore = YES;
+    }
+    if (doproject == NO) { 
+      t = indxindex(eglist, numeg, indx -> egroup) ; 
+      if (t<0) indx -> ignore = YES ;
     }
   }
   free (vv);
 
   numsnps = rmsnps (snpmarkers, numsnps, deletesnpoutname);     //  rid ignorable snps
+
+  
+  nindignore = 0 ; 
+  for (i=0; i<numindivs; ++i)  { 
+   indx = indivmarkers[i] ; 
+   t = strcmp(indx -> egroup, "Ignore") ; 
+   if (t==0) indx -> ignore = YES ;
+   if (indx -> ignore == YES) ++nindignore ;
+  }
+
+  // printf("zzz %d %d\n", shrinkmode, nindignore) ; 
+  if (shrinkmode && (nindignore > 0)) { 
+   printf("removing individuals set Ignore\n") ; 
+   numindivs = rmindivs(snpmarkers, numsnps, indivmarkers, numindivs) ;
+  }
 
 
   if (missingmode) {
@@ -775,6 +926,7 @@ main (int argc, char **argv)
    *  xindlist[i] = pointer to Indiv struct   */
 
   ZALLOC (xtypes, numindivs, int);
+  ivclear(xtypes, -2, numindivs) ;
 
 
 
@@ -790,13 +942,15 @@ main (int argc, char **argv)
     xtypes[i] = k;
   }
 
-  printf ("number of samples used: %d number of snps used: %d\n", nrows,
-          ncols);
+  printf ("number of samples used: %d number of snps used: %d\n", nrows, ncols) ; 
+  printf ("number of pops for axes: %d\n",  numeg) ;
 
   if (shrinkmode) {
     ZALLOC (mmat, nrows * ncols, double);
     regmode = YES;
   }
+
+  if (numeigs==0) fastmode = NO ;
 
   if (fastmode) {
 
@@ -863,7 +1017,7 @@ main (int argc, char **argv)
   ZALLOC (lambda, nrows, double);
   ZALLOC (esize, nrows, double);
   ZALLOC (cc, (nrows > 3) ? nrows : 3, double);
-  ZALLOC (ww, nrows, double);
+  ZALLOC (ww, nrows +5, double);
   ZALLOC (badlist, nrows, int);
 
   blocksize = MIN (blocksize, ncols);
@@ -1001,7 +1155,7 @@ main (int argc, char **argv)
         if (ldregress > 0) {
 
           t = ldregx (ldvv, cc, ww, numld, nrows, ldr2lo, ldr2hi);
-          if (t < 2) {
+           if (t < 2) {
             bumpldvv (ldvv, cc, &numld, ldregress, nrows, ldsnpbuff, i);
             lastldchrom = chrom;
             ynumsnps += asum2 (ww, nrows) / asum2 (cc, nrows);
@@ -1081,7 +1235,12 @@ main (int argc, char **argv)
       fatalx ("XTX has zero trace (perhaps no data)\n");
     vst (XTX, XTX, 1.0 / y, nrows * nrows);
 
+
     eigvecs (XTX, lambda, evecs, nrows);
+    
+    if (verbose) printf("zztrace: %9.3f nrows: %3d xmat[0] %12.6f lambda[0] %12.6f\n", y, nrows, XTX[0], lambda[0]) ;  
+
+    nrxtx = nrows ;
 // eigenvalues are in decreasing order 
 
     if (outliter > numoutliter)
@@ -1103,6 +1262,34 @@ main (int argc, char **argv)
     }
     nrows = loadindx (xindlist, xindex, indivmarkers, numindivs);
     printf ("number of samples after outlier removal: %d\n", nrows);
+  }
+
+ if (toprightindex >=0) {  
+  
+  ZALLOC(emean, numeg, double) ; 
+  ZALLOC(flip, numeigs, int) ; 
+  ivclear(flip, -1, numeigs) ; 
+  for (j=0; j< MIN(numeigs, 2); ++j) { 
+   xpt = evecs + j*nrows ; 
+   calcmean (emean, xpt, nrows, xtypes, numeg);
+   y = emean[toprightindex] ; 
+   if (y<0) { vst(xpt, xpt, -1, nrows) ; 
+    printf("eigenvector %d flipped!\n", j+1) ;
+    flip[j] = 1 ; 
+   }
+  }
+ }
+  
+
+
+// now load up elllist 
+  for (j=0; j<nellindivs; ++j) { 
+   k = indindex(indivmarkers, numindivs, elllist[j]) ; 
+   if ((k>=0) && (indivmarkers[k] -> ignore)) k = -1 ;
+   ellindex[j] = k ; 
+   if (k<0) fatalx("*** warning no ellipse for %s\n", elllist[j]) ; 
+   indx = ellindivs[j] = indivmarkers[k] ; 
+   printf("elllist: %3d %20s\n", indx -> ID) ; fflush(stdout) ;
   }
 
   if (outliername != NULL)
@@ -1130,6 +1317,11 @@ main (int argc, char **argv)
   }
   else {
     /* *** START of code to print Tracy-Widom statistics */
+    ynrows = (double) nrows;
+    mpestimate(lambda, m, &zeffect, &zsigma) ;
+
+    if (mpshrink) printf("zeffect:  %9.3f  zsigma: %9.3f\n", zeffect, zsigma) ;
+
     if (fstonly == NO) {
       printf ("\n## Tracy-Widom statistics: rows: %d  cols: %d\n", nrows,
               ncols);
@@ -1141,7 +1333,6 @@ main (int argc, char **argv)
       printf ("\n");
     }
 
-    ynrows = (double) nrows;
 
     for (i = 0; i < m; ++i) {
       if (fstonly)
@@ -1150,7 +1341,12 @@ main (int argc, char **argv)
       if (zn > 0)
         zn = MAX (ynrows, zn);
       tail = dotwcalc (lambda + i, m - i, &tw, &zn, &zvar, nostatslim);
-      esize[i] = zn;
+//    printf("zzeff: %3d %12.3f %12.3f\n", i, zeffect, zn) ; 
+      if (mpshrink) {
+       zn = zeffect ; 
+      }
+      esize[i] = zeffect ;  // not used
+
       printf ("%4d  %12.6f", i + 1, lambda[i]);
       if (i == 0)
         printf ("%12s", "NA");
@@ -1185,16 +1381,39 @@ main (int argc, char **argv)
     if (fastshrink) { 
      zn = znval ;  
      dotwcalc (lambda + numshrink, m - numshrink, &tw, &zn, &zvar, nostatslim);
-     zfn = nrows ; 
-     zfp = zn ; 
-     printf("fastshrink:  nsamps: %6.0f  numshrink: %d  neff: %9.3f\n", zfn, numshrink, zfp) ; 
-     ZALLOC(edgarw, m, double) ;   
+     if (mpshrink) zn = zeffect ;  
+     zfp = nrows ; 
+     zfn = zn ; 
+     printf("fastshrink:  nsamps: %6.0f  numshrink: %d  neff: %9.3f\n", zfp, numshrink, zfn) ; 
+     printf("nrows ncols %d %d\n", nrows, ncols) ;  
+     ZALLOC(edgarw, m, double) ;  
      vclear(edgarw, 1.0, m) ;  
-     estedgar(edgarw, lambda, numshrink, m-numshrink, zfp/zfn) ; 
-     printf("shrink factors\n") ;
-     printmat(edgarw, 1, numeigs) ; 
+/*
+     y = 4339.067 ; 
+     yjfac = (double) nrows * y - (double) numeigs ; 
+     estedgar(edgarw, lambda, numshrink, m-numshrink, y, yjfac) ; 
+     printf("shrink factors: ") ;
+     printmatl(edgarw, 1, numeigs) ; 
      printnl() ;
      printnl() ;
+
+     y = (double) ncols / (double) nrows ; 
+     yjfac = (double) nrows * y - (double) numeigs ; 
+     estedgar(edgarw, lambda, numshrink, m-numshrink, y, yjfac) ; 
+     printf("shrink factors: ") ;
+     printmatl(edgarw, 1, numeigs) ; 
+     printnl() ;
+     printnl() ;
+
+*/
+     y = zfn/zfp ; 
+     yjfac = (double) nrows * y - (double) numeigs ; 
+     estedgar(edgarw, lambda, numshrink, m-numshrink, y, yjfac) ; 
+     printf("shrink factors: ") ;
+     printmatl(edgarw, 1, numeigs) ; 
+     printnl() ;
+     printnl() ;
+
      for (i=0; i<nrows; ++i)  {
       indx = xindlist[i];
       indx -> flag = 7777 ;
@@ -1237,7 +1456,7 @@ main (int argc, char **argv)
           xpt = fvecs + j * nrows;
           y = xpt[i];
           if (indx -> flag == 7777) y *= edgarw[j] ;  
-          fprintf (ofile, "%10.4f  ", y);
+          fprintf (ofile, "%10.4f  ", y);  // easymode
         }
         fprintf (ofile, "%15s\n", indx->egroup);
       }
@@ -1308,6 +1527,7 @@ main (int argc, char **argv)
 
     ZALLOC (acoeffs, numindivs * numeigs, double);
     ZALLOC (bcoeffs, numindivs * numeigs, double);
+    ZALLOC (xcoeffs, numindivs*numeigs, double) ; 
     if (partial_sum_lookup_buf) {
       free (partial_sum_lookup_buf);
       free (binary_rawcol);
@@ -1315,103 +1535,6 @@ main (int argc, char **argv)
       free (binary_mmask);
     }
     free (tblock);
-
-    if (regmode) {
-      ZALLOC (trow, ncols, double);
-      ZALLOC (rhs, ncols, double);
-      ZALLOC (emat, ncols * numeigs, double);
-      ZALLOC (regans, numeigs, double);
-    }
-
-
-    for (i = 0; i < numindivs; i++) {
-      if (!regmode)
-        break;
-      if (shrinkmode)
-        break;
-      indx = indivmarkers[i];
-      if (indx->ignore)
-        continue;
-      loadxdataind (xrow, xsnplist, i, ncols);
-      copyarr (xrow, trow, ncols);
-      fixxrow (xrow, xmean, xfancy, ncols);
-
-      kk = 0;
-      for (k = 0; k < ncols; ++k) {
-        if (trow[k] < 0)
-          continue;
-        rhs[kk] = xrow[k];
-        for (j = 0; j < numeigs; j++) {
-          emat[kk * numeigs + j] = fxscal[j] * ffvecs[j * ncols + k];
-        }
-        ++kk;
-      }
-      if (kk <= numeigs) {
-        indx->ignore = YES;
-        printf ("%s ignored (insufficient data\n", indx->ID);
-        continue;
-      }
-      regressit (regans, emat, rhs, kk, numeigs);
-      for (j = 0; j < numeigs; ++j) {
-        acoeffs[j * numindivs + i] = regans[j];
-      }
-    }
-
-    for (i = 0; i < numindivs; i++) {
-      indx = indivmarkers[i];
-      if (indx->ignore)
-        continue;
-      loadxdataind (xrow, xsnplist, i, ncols);
-      fixxrow (xrow, xmean, xfancy, ncols);
-
-      for (j = 0; j < numeigs; j++) {
-        y = fxscal[j] * vdot (xrow, ffvecs + j * ncols, ncols);
-        bcoeffs[j * numindivs + i] = y;
-      }
-    }
-
-    if ((!regmode) || shrinkmode) {
-      free (acoeffs);
-      acoeffs = bcoeffs;
-    }
-
-    ZALLOC (azq, nrows * numeigs, double);
-    ZALLOC (bzq, nrows * numeigs, double);
-
-    sqz (azq, acoeffs, numeigs, nrows, xindex);
-    sqz (bzq, bcoeffs, numeigs, nrows, xindex);
-
-    for (j = 0; j < numeigs; ++j) {
-
-      if (!regmode)
-        break;
-      if (shrinkmode)
-        break;
-
-      apt = azq + j * nrows;
-      bpt = bzq + j * nrows;
-      y = vdot (apt, bpt, nrows) / vdot (apt, apt, nrows);
-      vst (acoeffs + j * numindivs, acoeffs + j * numindivs, y, numindivs);
-    }
-
-
-    for (i = 0; i < numindivs; i++) {
-      indx = indivmarkers[i];
-      if (indx->ignore)
-        continue;
-      fprintf (ofile, "%20s ", indx->ID);
-      for (j = 0; j < numeigs; j++) {
-        y = acoeffs[j * numindivs + i];
-        if (indx -> flag == 7777) y *= edgarw[j] ;  
-        fprintf (ofile, "%10.4f  ", y);
-      }
-      if (qtmode) {
-        fprintf (ofile, "%15.6e\n", indx->qval);
-      }
-      else {
-        fprintf (ofile, "%15s\n", indx->egroup);
-      }
-    }
 
 
 
@@ -1423,11 +1546,239 @@ main (int argc, char **argv)
       printf ("%12s %4d %9.3f %9.3f\n", "eigenvector", j + 1, y1, y2);
     }
 
+    if (regmode) {
 
-    // end of numeigs > 0
+      ZALLOC(eigscmat, numeigs * numeigs, double) ; 
+      ZALLOC(eigscale, numeigs, double) ;
+      lsqproj(-99, xsnplist, ncols, indivmarkers, numindivs, fxscal, ffvecs, acoeffs, bcoeffs, xtypes, numeg) ; 
+
+      if (shrinkp_done == NO) { 
+       seteigscale(eigscale, acoeffs, bcoeffs, xindex, nrows, numeigs) ; 
+      }
+
+      else {
+       seteigscale(eigscale, xcoeffs, bcoeffs, xindex, nrows, numeigs) ; 
+      }
+ 
+      setdiag(eigscmat, eigscale, numeigs) ; 
+      mulmat(acoeffs, eigscmat, acoeffs,  numeigs, numeigs, numindivs) ; 
+
+   }
+
+// evec output
+
+    for (i = 0; i < numindivs; i++) {
+      indx = indivmarkers[i];
+      indx -> idnum = i ; 
+    }
+    for (i = 0; i < numindivs; i++) {
+      if (shrinkmode) break ; 
+      indx = indivmarkers[i];
+      if (indx->ignore) continue;
+      fprintf (ofile, "%20s ", indx->ID);
+      for (j = 0; j < numeigs; j++) {
+        y = acoeffs[j * numindivs + i];
+        if (indx -> flag == 7777) y *= edgarw[j] ;  
+        if (hiprec) fprintf (ofile, "%12.6f  ", y);
+        else fprintf (ofile, "%10.4f  ", y);   // main output
+      }
+      if (qtmode) {
+        fprintf (ofile, "%15.6e\n", indx->qval);
+      }
+      else {
+        fprintf (ofile, "%15s\n", indx->egroup);
+      }
+    }
+
+  if (nellindivs>0) { 
+
+   nblocks = numblocks (snpmarkers, numsnps, blgsize);
+   if (nblocks <= 1) {
+    printf("failed to set blocks...\n") ; 
+    return -1 ;  
+   }
+
+  ++nblocks ;  // dangerous bend 
+  printf ("number of blocks for block jackknife (ell): %d\n", nblocks);
+
+  ZALLOC (blstart, nblocks, int);
+  ZALLOC (blsize, nblocks, int);
+  blcnt = initarray_2Dint(nellindivs, nblocks, 0) ;
+
+  t = numeigs * nellindivs ; 
+  aellc = initarray_2Ddouble(nblocks, t, 0) ; 
+  bellc = initarray_2Ddouble(nblocks, t, 0) ; 
+
+  ZALLOC(awk, t, double) ; 
+  ZALLOC(bwk, t, double) ; 
+
+  setblocks (blstart, blsize, &xnblocks, xsnplist, ncols, blgsize);
+  fixwt (xsnplist, ncols, 1.0);
+
+    for (i = 0; i < ncols; ++i) {
+      cupt = xsnplist[i];
+      if (cupt -> ignore) continue ; 
+      if (cupt -> tagnumber < 0) continue ; 
+      ++ cupt -> tagnumber ;
+    }
+
+// set up block count for ellidivs[jj] 
+   for (jj=0; jj < nellindivs; ++jj) { 
+      i = ellindex[jj] ; 
+      if (i<0) fatalx("bad bug! bad index: %s\n", ellindivs[jj] -> ID) ;   
+      countsn(blcnt[jj], nblocks, xsnplist, ncols, i) ; 
+   }
+
+   for (bl=0; bl<nblocks; ++bl) {  
+    aco = aellc[bl] ;  
+    bco = bellc[bl] ;  
+    lsqproj(bl, xsnplist, ncols, ellindivs, nellindivs, fxscal, ffvecs, aco, NULL, xtypes, numeg) ; 
+    mulmat(aco, eigscmat, aco,  numeigs, numeigs, nellindivs) ; 
+   }
+    
+ }
 
 
+ if (shrinkmode) { 
+
+  for (i = 0; i < ncols; ++i) {
+    cupt = xsnplist[i];
+    getcolxf (cc, cupt, xindex, nrows, i, NULL, NULL);
+    for (j = 0; j < nrows; ++j) {
+      mmat[j * ncols + i] = cc[j];
+    }
   }
+
+  fclose (ofile) ; 
+
+  if (outputname != NULL)
+    openit (outputname, &ofile, "w");
+  else
+    ofile = stdout;
+  doshrinkp (mmat, nrows, ncols, xindex, xsnplist, xcoeffs) ;
+
+  
+
+  shrinkp_done = YES ;
+
+ for (j=0; j<numeigs; ++j) { 
+   if (nellindivs<1) break ; 
+   for (jj=0; jj<nellindivs; ++jj) { 
+    indx = ellindivs[jj] ; 
+    i = indx -> idnum ; 
+    awk[j*nellindivs+jj] = acoeffs[j*numindivs+i] ; 
+    bwk[j*nellindivs+jj] = xcoeffs[j*numindivs+i] ; 
+   }
+   aco = awk + j*nellindivs ; 
+   bco = bwk + j*nellindivs ; 
+   y = vdot(aco, bco, nellindivs) / vdot(aco, aco, nellindivs) ;
+   printf("coeff multiplier (eigenvector %d): %9.3f\n", y, j) ; 
+   vst(aco, aco, y, nellindivs) ; 
+   for (jj=0; jj<nellindivs; ++jj) { 
+    indx = ellindivs[jj] ; 
+    i = indx -> idnum ; 
+    acoeffs[j*numindivs+i] =  awk[j*nellindivs+jj]; 
+   }
+   
+   for (bl=0; bl<nblocks; ++bl) { 
+    aco = aellc[bl] + j*nellindivs ; 
+    vst(aco, aco, y, nellindivs) ; 
+   }
+  }
+
+ }
+
+/**
+ aco = aellc[0] ; 
+ bco = aellc[1] ;
+ for (j=0; j<numeigs; ++j) { 
+   for (jj=0; jj<nellindivs; ++jj) { 
+    indx = ellindivs[jj] ; 
+    i = indx -> idnum ; 
+    printf("zzcheck: %s %d ", indx -> ID, j) ; 
+    if (shrinkmode) printf("%10.4f ", xcoeffs[j*numindivs+i]) ;
+    printf("%10.4f ", acoeffs[j*numindivs+i]) ;
+    printf("%10.4f ", aco[j*nellindivs+jj]) ;
+    printf("%10.4f ", bco[j*nellindivs+jj]) ;
+    printnl() ;
+  }
+ }
+*/
+
+ ZALLOC(jwt, nblocks, double) ; 
+ jmean = initarray_2Ddouble(nblocks, numeigs, -999) ; 
+ vvest = initarray_2Ddouble(nellindivs, numeigs, -999) ; 
+ vvar  = initarray_2Ddouble(nellindivs, numeigs*numeigs, -999) ; 
+
+ fflush(stdout) ; 
+
+ t = 0 ; 
+ if (elloutname != NULL) openit (elloutname, &ellfile, "w") ; 
+  else ellfile = stdout ;
+
+ if (ellconf > 0) {  fprintf(ellfile, "%9.3f ", ellconf) ; 
+  fprintf(ellfile, ":: %s ", outputname) ;
+  fprintf(ellfile, "\n") ;
+
+ for (jj=0; jj < nellindivs; ++jj) { 
+    indx = ellindivs[jj] ; 
+    floatit(jwt, blcnt[jj], nblocks) ; 
+    for (bl=0; bl<nblocks; ++bl) { 
+     for (j=0; j<numeigs; ++j) { 
+      jmean[bl][j] = aellc[bl][j*nellindivs+jj] ; 
+     }
+   }
+  
+  if (numeigs<2) continue ; 
+  wjackvest(vvest[jj], vvar[jj], numeigs, jmean[0], jmean, jwt, nblocks) ; 
+//   printf("zzbugq: ") ;  printmatl(vvar[jj], numeigs, numeigs) ; 
+  vest = vvest[jj] ; 
+  var = vvar[jj] ; 
+  copyarr(vest, zzest, 2) ; 
+   zzvar[0] = var[0] ; 
+   zzvar[1] = zzvar[2] = var[1] ; 
+   zzvar[3] = var[1*numeigs+1] ; 
+  
+//  printf("zzbugz %d ", jj) ;  printmatl(zzvar, 2, 2) ;
+  emean = jmean[0] ; 
+  fprintf(ellfile, "sample: %20s\n", indx -> ID) ;
+  printmatlfile(emean, 1, 2, ellfile) ; 
+  printmatlfile(zzest, 1, 2, ellfile) ; 
+  fprintf(ellfile, "\n") ; 
+  printmatlfile(zzvar, 2, 2, ellfile) ;
+//  printf("zzbugy: ") ;  printmatl(zzvar, 2, 2) ; 
+  if (ellconf<0) continue ; 
+  eigvecs(zzvar, zlambda, zvecs, 2) ; 
+  zval = critchi(2, 1.0 - ellconf) ; 
+  za1 = 2.0 * sqrt(zval*zlambda[0]) ;  // diameter 
+  za2 = 2.0 * sqrt(zval*zlambda[1]) ;  // diameter 
+//  printf("zzbugza %12.6f %12.6f : ", za1, za2) ; printmatl(zlambda, 1, 2) ; 
+  printmatl(zvecs, 2, 2) ; 
+  printnl() ; 
+  fprintf(ellfile, "ellcoords: ") ;
+  y1 = zvecs[1] ; 
+  y2 = zvecs[0] ; 
+  if (fabs(y2) < fabs(y1)*1.0e-20) zangle = 90 ; 
+  else zangle = rad2deg(atan(y1/y2)) ; 
+  fprintf(ellfile, "%10.4f %10.4f ", emean[0], emean[1]) ;
+  ww[0] = za1/2 ;  
+  ww[1] = za2/2 ;  
+  ww[2] = -deg2rad(zangle) ;
+  printmatwlxfile(ww, 1, 3, 3, ellfile) ;
+  fprintf(ellfile, " :: %9.3f\n", ellconf) ;
+  
+  ++t ;  
+ }
+ 
+
+  fclose(ellfile) ;
+ }
+
+
+// numeigs > 0 
+}
+//  printf("zzzend\n") ;
+
 // output files
   settersemode (YES);
 
@@ -1451,6 +1802,7 @@ main (int argc, char **argv)
   if (numeg == 1)
     dotpopsmode = NO;
 
+/**
   if (dotpopsmode == NO) {
     writesnpeigs (snpeigname, xsnplist, ffvecs, numeigs, ncols);
     printxcorr (XTX, nrows, xindlist);
@@ -1461,30 +1813,15 @@ main (int argc, char **argv)
     }
 
     if (!shrinkmode) {
-      printf ("##end of smartpca run\n");
+      ymem = calcmem(1)/1.0e6 ;
+      printf("##end of smartpca: %12.3f seconds cpu %12.3f Mbytes in use\n", cputime(1), ymem) ;
     }
-    return 0;
-
 
     fclose (ofile);
-
-    for (i = 0; i < ncols; ++i) {
-      cupt = xsnplist[i];
-      getcolxf (cc, cupt, xindex, nrows, i, NULL, NULL);
-      for (j = 0; j < nrows; ++j) {
-        mmat[j * ncols + i] = cc[j];
-      }
-    }
-
-    if (outputname != NULL)
-      openit (outputname, &ofile, "w");
-    else
-      ofile = stdout;
-    printf
-      ("##end of primary run (computation of shrunk eigenvectors begins\n");
-    doshrinkp (mmat, nrows, ncols, xindex, xsnplist);
+    return 0;
 
   }
+*/
 
   ZALLOC (chitot, numeg * numeg, double);
 
@@ -1492,10 +1829,11 @@ main (int argc, char **argv)
   ZALLOC (fstans, numeg * numeg, double);
   ZALLOC (fstsd, numeg * numeg, double);
   ZALLOC (fstzz, numeg * numeg, double);
+  ZALLOC (fstnum, numeg * numeg, int);
 
   setinbreed (inbreed);
 
-  if (inbreed) {
+  if (inbreed && (fstjack == YES)) {
     ZALLOC (inbans, numeg, double);
     ZALLOC (inbsd, numeg, double);
     doinbxx (inbans, inbsd, xsnplist, xindex, xtypes,
@@ -1508,22 +1846,30 @@ main (int argc, char **argv)
     free (inbsd);
   }
 
-  dofstxx (fstans, fstsd, xsnplist, xindex, xtypes,
+  ZALLOC(fstmean, numeg*numeg, double) ;
+
+  dofstxx (fstmean, fstans, fstsd, fstnum, xsnplist, xindex, xtypes,
            nrows, ncols, numeg, blgsize, snpmarkers, indivmarkers);
 
    copyarr(fstans, fstzz, numeg*numeg) ; 
     for (k1 = 0; k1 < numeg; ++k1) {
       for (k2 = k1 + 1; k2 < numeg; ++k2) {
         fstzsc =  fstans[k1 * numeg + k2] / (fstsd[k1 * numeg + k2] + 1.0e-10) ; 
-        fstzz[k2*numeg + k1] = clip(fstzsc, -9.999, 9.999) ; 
+        fstzz[k2*numeg + k1] = clip(fstzsc, -9.999999, 9.999999) ; 
       }
      }
+
+
+  printmega(megaoutname, eglist, numeg, fstans) ;
    
-  if ((phylipname == NULL) && (numeg > 10)) {
+  if (((phylipname == NULL) && (numeg > 10)) || fstverbose)  {
     printf ("## Fst statistics between populations:         fst       std error      Z\n");
     for (k1 = 0; k1 < numeg; ++k1) {
+      if (inbreed && (xpopsize[k1] <= 1)) continue ; 
       for (k2 = k1 + 1; k2 < numeg; ++k2) {
+        if (inbreed && (xpopsize[k2] <= 1)) continue ; 
         fstzsc =  fstans[k1 * numeg + k2] / (fstsd[k1 * numeg + k2] + 1.0e-10) ; 
+        fnum = fstnum[k1*numeg+k2] ; 
         if (fsthiprec == NO) {
           printf (" %20s %20s %9.3f %10.4f", eglist[k1], eglist[k2],
                   fstans[k1 * numeg + k2], fstsd[k1 * numeg + k2]);
@@ -1533,28 +1879,49 @@ main (int argc, char **argv)
                   eglist[k2], fstans[k1 * numeg + k2],
                   fstsd[k1 * numeg + k2]);
         }
-        printf("  %9.3f\n", fstzsc) ;
+           printf("  %9.3f ", fstzsc) ;
+           printf(" %12d", fnum) ; 
+           printnl() ;
       }
     }
-    printf ("\n");
+      printnl() ;
   }
+  printf("## end of Fst statistics between populations\n") ;
+
   if (fstdetailsname != NULL) {
-    printf
-      ("## Fst statistics between populations:         fst       std error\n");
+    fprintf
+      (fstdetails, "## Fst statistics between populations:     fst     fstjack       std error      Z    snpnumber\n");
     for (k1 = 0; k1 < numeg; ++k1) {
       for (k2 = k1 + 1; k2 < numeg; ++k2) {
-        fprintf (fstdetails, "F_st %20s %20s %12.6f %12.6f\n",
-                 eglist[k1], eglist[k2], fstans[k1 * numeg + k2],
+       if (fsthiprec == NO) { 
+        fprintf (fstdetails, "F_st %20s %20s %12.6f %12.6f %12.6f",
+                 eglist[k1], eglist[k2], fstmean[k1*numeg+k2], fstans[k1 * numeg + k2],
                  fstsd[k1 * numeg + k2]);
+       }
+       else { 
+        fprintf (fstdetails, "F_st %20s %20s %15.9f %15.9f %15.9f",
+                 eglist[k1], eglist[k2], fstmean[k1*numeg+k2], fstans[k1 * numeg + k2],
+                 fstsd[k1 * numeg + k2]);
+       }
+       fstzsc =  fstans[k1 * numeg + k2] / (fstsd[k1 * numeg + k2] + 1.0e-10) ; 
+       fnum =  fstnum[k1 * numeg + k2] ; 
+       fprintf(fstdetails, " %9.3f", fstzsc) ;
+       fprintf(fstdetails, " %6d", fnum) ; 
+       fprintf(fstdetails, "\n") ;
       }
     }
-    fprintf (fstdetails, "\n");
   }
 
   if (fstz)  {
     printnl() ;
-    printf("Fst: Z/F *1000 [clipped to -10,10]\n") ;
-    printmatz5(fstzz, eglist, numeg) ; 
+    if (fsthiprec==NO) { 
+     printf("Fst: Z/F *1000 [clipped to -10,10]\n") ;
+     printmatz5(fstzz, eglist, numeg) ; 
+    }
+    else  { 
+     printf("Fst: Z/F *1000000 [clipped to -10,10]\n") ;
+     printmatz10(fstzz, eglist, numeg) ; 
+    }
   }
 
 
@@ -1590,13 +1957,15 @@ main (int argc, char **argv)
       printnl ();
     }
   }
-  printf ("s.dev * 1000000:\n");
+  printf ("std. err.  * 1000000:\n");
   vst (fstsd, fstsd, 1000.0, numeg * numeg);
   printmatz5 (fstsd, eglist, numeg);
+
   printnl ();
   fflush (stdout);
   if (fstonly) {
-    printf ("##end of smartpca run\n");
+    ymem = calcmem(1)/1.0e6 ;
+    printf("##end of smartpca: %12.3f seconds cpu %12.3f Mbytes in use\n", cputime(1), ymem) ;
     return 0;
   }
   vst (fstsd, fstsd, 1.0 / 1000.0, numeg * numeg);
@@ -1629,6 +1998,7 @@ main (int argc, char **argv)
       break;
     cupt = xsnplist[i];
     getcolxf (cc, cupt, xindex, nrows, i, NULL, NULL);
+
     sprintf (sss, "%s raw", cupt->ID);
     dottest (sss, cc, eglist, numeg, xtypes, nrows);
     for (j = 0; j < numeigs; j++) {
@@ -1650,13 +2020,14 @@ main (int argc, char **argv)
   }
 
   if (!shrinkmode) {
-    printf ("##end of smartpca run\n");
+    ymem = calcmem(1)/1.0e6 ;
+    printf("##end of smartpca: %12.3f seconds cpu %12.3f Mbytes in use\n", cputime(1), ymem) ;
     return 0;
   }
 
-  printf
-    ("##end of primary run (computation of shrunk eigenvectors begins\n");
+  printf ("##end of primary run \n");
 
+ if (shrinkmode && (shrinkp_done == NO)) {
   for (i = 0; i < ncols; ++i) {
     cupt = xsnplist[i];
     getcolxf (cc, cupt, xindex, nrows, i, NULL, NULL);
@@ -1671,7 +2042,11 @@ main (int argc, char **argv)
     openit (outputname, &ofile, "w");
   else
     ofile = stdout;
-  doshrinkp (mmat, nrows, ncols, xindex, xsnplist);
+  doshrinkp (mmat, nrows, ncols, xindex, xsnplist, xcoeffs);
+ }
+
+   ymem = calcmem(1)/1.0e6 ;
+   printf("##end of smartpca: %12.3f seconds cpu %12.3f Mbytes in use\n", cputime(1), ymem) ;
 
   return 0;
 }
@@ -1734,29 +2109,37 @@ readcommands (int argc, char **argv)
   getstring (ph, "phylipoutname:", &phylipname);        /* changed 11/02/06 */
   getstring (ph, "weightname:", &weightname);
   getstring (ph, "fstdetailsname:", &fstdetailsname);
+  getint(ph, "fstsnpout:", &fstsnpout) ;
   getstring (ph, "deletsnpoutname:", &deletesnpoutname);
+  getstring (ph, "topright:", &topright);
+  getstring (ph, "elloutname:", &elloutname);
+  getstring (ph, "megaoutname:", &megaoutname);
+  getdbl (ph, "ellconf:", &ellconf);
   getint (ph, "numeigs:", &numeigs);
   getint (ph, "maxpops:", &maxpops);
-  maxpops = MIN (maxpops, MAXPOPS);
   getint (ph, "numoutevec:", &numeigs); /* changed 11/02/06 */
   getint (ph, "markerscore:", &markerscore);
   getint (ph, "chisqmode:", &chisqmode);
   getint (ph, "missingmode:", &missingmode);
   getint (ph, "shrinkmode:", &shrinkmode);
+  getint (ph, "newshrink:", &newshrink);
   getint (ph, "fastshrink:", &fastshrink);
   getint (ph, "autoshrink:", &autoshrink);
+  getint (ph, "mpshrink:", &mpshrink);
   getdbl (ph, "autothresh:", &autothresh);
   getint (ph, "fancynorm:", &fancynorm);
   getint (ph, "usenorm:", &fancynorm);  /* changed 11/02/06 */
   getint (ph, "dotpopsmode:", &dotpopsmode);
   getint (ph, "pcorrmode:", &pcorrmode);        /* print correlations */
   getint (ph, "pcpopsonly:", &pcpopsonly);      /* but only within population */
+  getint (ph, "readparsonly:", &readparsonly);      /* treminate after reading par file */
   getint (ph, "altnormstyle:", &altnormstyle);
   getint (ph, "hashcheck:", &hashcheck);
   getint (ph, "popgenmode:", &altnormstyle);
   getint (ph, "noxdata:", &noxdata);
   getint (ph, "inbreed:", &inbreed);
   getint (ph, "easymode:", &easymode);
+  getint (ph, "printcover:", &printcover);
   getint (ph, "seed:", &t);
   seed = (long) t;
 
@@ -1767,6 +2150,10 @@ readcommands (int argc, char **argv)
   getint (ph, "usepopsformissing:", &usepopsformissing);
   getint (ph, "regmode:", &regmode);
   getint (ph, "lsqproject:", &regmode);
+  getint (ph, "doproject:", &doproject);
+  getint (ph, "rounakmode:", &rounakmode);
+  getint (ph, "fstverbose:", &fstverbose);
+
 
   t = -1;
   getint (ph, "xdata:", &t);
@@ -1784,7 +2171,10 @@ readcommands (int argc, char **argv)
   getint (ph, "pubmean:", &pubmean);
   getint (ph, "fstonly:", &fstonly);
   getint (ph, "fsthiprecision:", &fsthiprec);
+  getint (ph, "fstjack:", &fstjack);
+
   getint (ph, "hiprecision:", &hiprec);
+  getint (ph, "hiprec:", &hiprec);
   getint (ph, "fstz:", &fstz);
 
   getint (ph, "ldregress:", &ldregress);
@@ -1823,6 +2213,7 @@ readcommands (int argc, char **argv)
   getint (ph, "packout:", &packout);    /* now obsolete 11/02/06 */
   getstring (ph, "twxtabname:", &twxtabname);
   getstring (ph, "id2pops:", &id2pops);
+  getstring (ph, "elllistname:", &elllistname) ; 
 
   getdbl (ph, "r2thresh:", &r2thresh);
   getdbl (ph, "r2genlim:", &r2genlim);
@@ -2187,6 +2578,7 @@ dotpops (double *X, char **eglist, int numeg, int *xtypes, int nrows)
   int i, j, k1, k2;
 
 
+  if (dotpopsmode == NO) return ;
   if (fstonly)
     return;
   ZALLOC (pp, numeg * numeg, double);
@@ -2435,40 +2827,41 @@ ldregx (double *gsource, double *gtarget, double *res, int rsize,
 
 
 void
-dofstxx (double *fstans, double *fstsd, SNP ** xsnplist, int *xindex,
+dofstxx (double *xfst, double *fstans, double *fstsd, int *fstnum, SNP ** xsnplist, int *xindex,
          int *xtypes, int nrows, int ncols, int numeg, double blgsize,
          SNP ** snpmarkers, Indiv ** indm)
 {
 
+
   int nblocks, xnblocks;
   int *blstart, *blsize;
-  double *xfst;
 
   if (qtmode == YES) {
     return;
   }
 
   nblocks = numblocks (snpmarkers, numsnps, blgsize);
-  printf ("number of blocks for moving block jackknife: %d\n", nblocks);
+  printf ("number of blocks for block jackknife: %d\n", nblocks);
+
+/**
   if (nblocks <= 1) {
     return;
   }
+*/
 
   ZALLOC (blstart, nblocks, int);
   ZALLOC (blsize, nblocks, int);
-  ZALLOC (xfst, numeg * numeg, double);
 
 
   setblocks (blstart, blsize, &xnblocks, xsnplist, ncols, blgsize);
   fixwt (xsnplist, ncols, 1.0);
 
-  dofstnumx (xfst, fstans, fstsd, xsnplist, xindex, xtypes,
+  dofstnumx (xfst, fstans, fstsd, fstnum, xsnplist, xindex, xtypes,
              nrows, ncols, numeg, nblocks, indm, YES);
 
   free (blstart);
   free (blsize);
-  free (xfst);
-
+ 
 }
 
 void
@@ -2518,11 +2911,6 @@ oldfstcol (double *estn, double *estd, SNP * cupt,
       continue;
     cc[0] += g;
     cc[1] += 2 - g;
-  }
-  if (ncall < 0) {
-    printf ("qq2\n");
-    printimat (c1, 1, 2);
-    printimat (c2, 1, 2);
   }
 
   ya = c1[0];
@@ -2604,12 +2992,6 @@ fstcol (double *estn, double *estd, SNP * cupt,
     if (g < 0)
       continue;
     ivvp (cc, cc, ccc[i], 2);
-  }
-
-  if (ncall < 0) {
-    printf ("qqq\n");
-    printimat (c1, 1, 2);
-    printimat (c2, 1, 2);
   }
 
   ya = c1[0];
@@ -2711,7 +3093,8 @@ writesnpeigs (char *snpeigname, SNP ** xsnplist, double *ffvecs, int numeigs,
     fprintf (fff, " %12d", nnint (cupt->physpos));
 
     for (j = 0; j < numeigs; ++j) {
-      fprintf (fff, " %9.3f", ffvecs[j * ncols + i]);
+      if (hiprec) fprintf (fff, " %12.6f", ffvecs[j * ncols + i]);
+      else fprintf (fff, " %9.3f", ffvecs[j * ncols + i]);
     }
     fprintf (fff, "\n");
   }
@@ -2756,8 +3139,8 @@ getcolxz (double *xcol, SNP * cupt, int *xindex, int *xtypes, int nrows,
   double *popsum = NULL;
 
   if (usepopsformissing) {
-    ZALLOC (popnum, MAXPOPS + 1, double);
-    ZALLOC (popsum, MAXPOPS + 1, double);
+    ZALLOC (popnum, maxpops + 1, double);
+    ZALLOC (popsum, maxpops + 1, double);
   }
 
   c0 = c1 = 0;
@@ -2777,9 +3160,11 @@ getcolxz (double *xcol, SNP * cupt, int *xindex, int *xtypes, int nrows,
     c1 += 2 - g;
     if (usepopsformissing) {
       k = xtypes[j];
-      popsum[k] += (double) g;
-      popnum[k] += 1.0;
-      kmax = MAX (kmax, k);
+      if (k>=0) { 
+       popsum[k] += (double) g;
+       popnum[k] += 1.0;
+       kmax = MAX (kmax, k);
+      } 
     }
   }
   floatit (xcol, rawcol, nrows);
@@ -3215,8 +3600,10 @@ doinbxx (double *inbans, double *inbsd, SNP ** xsnplist, int *xindex,
          SNP ** snpmarkers, Indiv ** indm)
 {
 
+
   int nblocks, xnblocks;
   int *blstart, *blsize;
+
   double *xinb;
 
   nblocks = numblocks (snpmarkers, numsnps, blgsize);
@@ -3428,8 +3815,24 @@ printevecs (SNP ** snpmarkers, Indiv ** indivmarkers, Indiv ** xindlist,
 
   double *ffvecs, *fvecs, *cc, *xrow, *bcoeffs, y;
   double *fxscal, *xpt, val;
-  int i, j, k;
+  int i, j, k, a, b ;
   Indiv *indx;
+  static int ncall = 0 ; 
+
+/**
+  char *isample = "I3122" ; 
+  int qindex ;  
+
+  qindex = indindex(indivmarkers, numindivs, isample) ; 
+*/
+
+  ++ncall;  
+  if (ncall>1) { 
+   printf("repeated calls to printevecs ... all but first ignored\n") ;
+   return  ; 
+  }
+
+
 
   fprintf (ofile, "%20s ", "#eigvals:");
   for (j = 0; j < numeigs; j++) {
@@ -3438,7 +3841,9 @@ printevecs (SNP ** snpmarkers, Indiv ** indivmarkers, Indiv ** xindlist,
   fprintf (ofile, "\n");
 
   if ((easymode) || (nrows == numindivs)) {
+
 // should be separate routine
+    printf("writing eigenvecotrs for  %d samples\n", nrows) ; 
 
     ZALLOC (fvecs, nrows * numeigs, double);
     setfvecs (fvecs, eigenvecs, nrows, numeigs);
@@ -3456,22 +3861,24 @@ printevecs (SNP ** snpmarkers, Indiv ** indivmarkers, Indiv ** xindlist,
         y = xpt[i];
         if (indx -> flag == 7777) y *= edgarw[j] ;
         if (hiprec) fprintf (ofile, "%12.6f  ", y);
-        else fprintf (ofile, "%10.4f  ", y);
+        else fprintf (ofile, "%10.4f  ", y);  // printevecs 
+        eigenvecs[j*numindivs + i] = y ; 
       }
       fprintf (ofile, "%15s\n", indx->egroup);
+      fflush(ofile) ;
     }
     free (fvecs);
-    return;
+   return;
   }
 
+  printf("zznoteasy\n") ;
+  fatalx("... not yet implemented!\n") ;
   ZALLOC (ffvecs, ncols * numeigs, double);
   ZALLOC (fvecs, nrows * numeigs, double);
   ZALLOC (cc, nrows, double);
   ZALLOC (xrow, ncols, double);
   ZALLOC (bcoeffs, numeigs * numindivs, double);
   ZALLOC (fxscal, numeigs, double);
-
-
 
   setfvecs (fvecs, eigenvecs, nrows, numeigs);
 
@@ -3484,6 +3891,7 @@ printevecs (SNP ** snpmarkers, Indiv ** indivmarkers, Indiv ** xindlist,
     }
   }
 
+ 
   for (i = 0; i < nrows; i++) {
 
     for (k = 0; k < ncols; ++k) {
@@ -3523,9 +3931,12 @@ printevecs (SNP ** snpmarkers, Indiv ** indivmarkers, Indiv ** xindlist,
     fprintf (ofile, "%20s ", indx->ID);
     for (j = 0; j < numeigs; j++) {
       y = bcoeffs[j * numindivs + i];
-      fprintf (ofile, "%10.4f  ", y);
+      eigenvecs[j * numindivs + i] = y ; 
+      if (hiprec) fprintf (ofile, "%12.6f  ", y);
+      else fprintf (ofile, "%10.4f  ", y);
     }
     fprintf (ofile, "%15s\n", indx->egroup);
+    fflush(ofile) ; 
   }
 
   writesnpeigs (snpeigname, snpmarkers, ffvecs, numeigs, ncols);
@@ -3548,12 +3959,20 @@ norme (double *ee, int n)
   vsp (ee, ee, -y, n);
   y = asum2 (ee, n);
   vst (ee, ee, 1.0 / sqrt (y), n);
+
+/**
+  y = asum(ee, n) ; 
+  if (isnan(y)) fatalx("(norme) isnan!\n") ;
+*/
 }
 
 void
 cpr (double *a, double *b, int n)
 {
   double y;
+  return ; 
+
+// debug
   printf ("zzcpr\n");
   y = vdot (a, a, n);
   printf ("a a:: %12.3f\n", y);
@@ -3566,6 +3985,7 @@ cpr (double *a, double *b, int n)
 void
 doproj (double *regans, int isample, SNP ** xsnplist, double *fxvecs,
         int numeigs, int ncols)
+// work (numeigs^2 + ncols) * numeigs  --- small
 {
 
   double *xrow, *trow, *rhs, *emat;
@@ -3579,7 +3999,6 @@ doproj (double *regans, int isample, SNP ** xsnplist, double *fxvecs,
   loadxdataind (xrow, xsnplist, isample, ncols);
   copyarr (xrow, trow, ncols);
   fixxrow (xrow, xmean, xfancy, ncols);
-//  cpr (fxvecs, xrow, ncols);
   kk = 0;
   for (k = 0; k < ncols; ++k) {
     if (trow[k] < 0)
@@ -3600,24 +4019,239 @@ doproj (double *regans, int isample, SNP ** xsnplist, double *fxvecs,
 }
 
 void
-doshrinkp (double *mmat, int m, int n, int *xindex, SNP ** xsnplist)
+doshrinkp2 (double *mmat, int m, int n, int *xindex, SNP ** xsnplist, double *xcoeffs)
+// lsq project mode
+// shrink multiple evecs at once
+{
+  double *mmatt, *xmat, y, yscale;
+  double *evecs, *lambda, *ffvecs, *fxvecs;
+  double *dv1, *dd, *d, delta, *evec, *ww, *w2, *ediff, *fxv;
+  double eco, lam;
+  int i, j, k, l, a, b, t;
+  char cc;
+  double *sold, *snew, *enew, *ss, *ymul, *xpt;
+  int debug;
+  double *oldffv, *trow, *ffvec;
+  int nrows = m ; 
+
+  printf ("doshrink (newshrink) called\n");
+  fflush (stdout);
+  cputimes(0, 2) ; 
+
+  ZALLOC (xmat, m * m, double);
+  ZALLOC (evecs, m * m, double);
+  ZALLOC (lambda, m * m, double);
+  ZALLOC (dd, m * m, double);
+  ZALLOC (dv1, m, double);
+  ZALLOC (d, m, double);
+  ZALLOC (ww, m, double);
+  ZALLOC (w2, m, double);
+  ZALLOC (ymul, numeigs, double);
+  ZALLOC (ediff, m, double);
+  ZALLOC (enew, m, double);
+  ZALLOC (oldffv, n, double);
+  ZALLOC (ffvec, n, double);
+  ZALLOC (ffvecs, numeigs * n, double);
+  ZALLOC (fxvecs, numeigs * n, double);
+
+  ZALLOC (sold, numeigs * m, double);
+  ZALLOC (snew, numeigs * m, double);
+  ss = xcoeffs ; 
+
+  if ( (XTX != NULL)  && (m == nrxtx)) { 
+    xmat = XTX ; 
+  }
+// can we copy XTX
+
+ else {
+  printf(" (doshrinkp2) *** recomputing xmat\n") ;  fflush(stdout) ;
+  for (i = 0; i < m; i++) {
+    for (j = 0; j < m; j++) {
+      for (k = 0; k < n; ++k) {
+        xmat[i * m + j] += mmat[i * n + k] * mmat[j * n + k];
+      }
+    }
+  }
+ }
+
+  yscale = y = trace (xmat, m) / (double) (m - 1);
+  y = fabs(yscale-1.0) ; 
+  if (y>0.01) printf ("trace:  %9.3f\n", yscale);
+
+  fflush(stdout) ; 
+  if (yscale <= 0.0)
+    fatalx ("mmat has zero trace (perhaps no data)\n");
+       
+   vst (xmat, xmat, 1.0 / yscale, m * m);  // force mean eigenvalue to be 1 
+
+  eigvecs (xmat, lambda, evecs, m);
+
+
+ if (toprightindex >=0) {  
+  for (j=0; j< numeigs; ++j) { 
+   if (flip == NULL) break ; 
+   if (flip[j] != 1) continue ; 
+    xpt = evecs + j*nrows ; 
+    vst(xpt, xpt, -1, nrows) ; 
+    printf("(shrinkp2) eigenvector %d flipped!\n", j+1) ;
+   }
+  }
+  
+  for (i = 0; i < numeigs; i++) {
+    evec = evecs + i * m;
+    norme (evec, m);
+    mulmat (ffvec, evec, mmat, 1, m, n);  // work m*n*numeigs  (not too bad)  ffvecs is numeigs*n  
+    y = asum2 (ffvec, n) / (double) n;
+    vst (ffvecs + i * n, ffvec, 1.0 / sqrt (y), n);
+  }
+
+  for (i = 0; i < numindivs; i++) {
+    doproj (ww, i, xsnplist, ffvecs, numeigs, n);
+    for (j = 0; j < numeigs; ++j) {
+      ss[j * numindivs + i] = ww[j];
+    }
+  }
+
+// old style projection onto eigenvectors
+// normalized eigenvector // don't need to do this for indivs in nrows  
+   printf(" old style projection complete\n") ;
+
+  copyarr (ffvecs, fxvecs, numeigs * n);
+  for (i = 0; i < numeigs; i++) {
+
+    evec = evecs + i * m;
+    lam = lambda[i];
+
+    mulmat (ww, evec, xmat, 1, m, m);
+    vst (ww, ww, 1.0 / lam, m);
+    norme (ww, m);
+    copyarr (ww, sold + i * m, m);   // redundant but uniform with snew 
+  }
+
+    for (a = 0; a < m; a++) {
+     cputimes(0, 3) ; 
+     for (i=0; i< numeigs; ++i) {
+
+      evec = evecs + i*m ; 
+      lam = lambda[i];
+
+      vst (dv1, xmat + a * m, -1, m);
+      vzero (dd, m * m);
+      for (k = 0; k < m; k++) {
+        dd[a * m + k] = dd[k * m + a] = dv1[k];
+      }
+      mulmat (ww, dd, evec, m, m, 1);
+      delta = vdot (ww, evec, m);
+      vzero (ediff, m);
+      for (k = 0; k < m; k++) {
+        if (k == i)
+          continue;
+        eco = vdot (evecs + k * m, ww, m);
+        eco /= (lam - lambda[k]);
+        vst (w2, evecs + k * m, eco, m);
+        vvp (ediff, ediff, w2, m);
+      }
+      if (lam > -delta) {
+        y = ymul[i] = lam / (lam + delta);
+      }
+
+      else {
+        ymul[i] = 1.0;
+        printf ("*** bad delta  -- negative eigenvalue!\n");
+        printf ("a: %d  i: %d\n", a, i);
+        printf ("lam, delta: %9.3f %9.3f\n", lam, delta);
+      }
+
+      vvp (enew, evec, ediff, m);
+      enew[a] = 0;
+      y = asum (enew, m) / (double) (m - 1);
+      vsp (enew, enew, -y, m);
+      enew[a] = 0;
+      norme (enew, m);
+
+
+      mulmat (ffvec, enew, mmat, 1, m, n);
+
+      y = asum2 (ffvec, n) / (double) n;
+      vst (ffvec, ffvec, 1.0 / sqrt (y), n);
+      fxv = fxvecs + i*n ; 
+      copyarr (ffvec, fxv, n);
+    }
+      doproj (ww, xindex[a], xsnplist, fxvecs, numeigs, n);
+      vvt(ww, ww, ymul, numeigs) ;
+      for (i=0; i<numeigs; i++) {
+       snew[i * m + a] = ww[i] ;
+      }
+     y = cputimes(1, 3) ; 
+     printf("sample %d shrunk!  cpu time: %9.3f\n", a, y) ;  fflush(stdout) ; 
+   }
+
+  for (j = 0; j < numeigs; j++) {
+    for (t=0; t<m; ++t) { 
+     i = xindex[t] ; 
+     ss[j * numindivs + i] = snew[j * m + t];
+     continue;
+    }
+  }
+
+  if (verbose) printf("zzevecs: p2\n") ;
+  printevecs (xsnplist, indivmarkers, indivmarkers,
+              numindivs, n, numindivs, numeigs, ss, lambda, ofile);
+
+  free (xmat);
+  free (evecs);
+  free (lambda);
+  free (dd);
+  free (dv1);
+  free (d);
+  free (ww);
+  free (w2);
+  free (ymul);
+  free (sold);
+  free (snew);
+  free (enew);
+  free (oldffv) ;
+  free (ffvec);
+  free (ffvecs);
+  free (fxvecs);
+  y = cputimes(1, 2) ;
+  printf ("doshrinkp2 exited :: cpu time : %9.3f\n", y);
+  fflush (stdout);
+}
+
+void
+doshrinkp (double *mmat, int m, int n, int *xindex, SNP ** xsnplist, double *xcoeffs)
 // lsq project mode
 {
   double *mmatt, *xmat, y, yscale;
   double *evecs, *lambda, *ffvecs, *fxvecs;
-  double *dv1, *dd, *d, delta, *evec, *ww, *w2, *ediff;
+  double *dv1, *dd, *d, delta, *evec, *ww, *w2, *ediff, *fxv;
   double eco, lam;
-  int i, j, k, l, a, t;
+  int i, j, k, l, a, b, t;
   char cc;
-  double *sold, *snew, *enew, *ss;
+  double *sold, *snew, *enew, *ss, *xpt;
   int debug;
-  double *xrow, *trow, *ffvec;
+  double *oldffv, *trow, *ffvec;
   double ymul;
+  int nrows = m ; 
+
+/**
+  char *isample = "I3122" ; 
+  int qindex ;  
+
+  qindex = indindex(indivmarkers, numindivs, isample) ; 
+*/
 
   if (shrinkmode == NO)
     return;
+
+  if (newshrink) { 
+   doshrinkp2(mmat, m, n, xindex, xsnplist, xcoeffs) ;
+   return ; 
+  }
   printf ("doshrink called\n");
   fflush (stdout);
+  cputimes(0, 2) ; 
 
   ZALLOC (xmat, m * m, double);
   ZALLOC (evecs, m * m, double);
@@ -3629,15 +4263,22 @@ doshrinkp (double *mmat, int m, int n, int *xindex, SNP ** xsnplist)
   ZALLOC (w2, m, double);
   ZALLOC (ediff, m, double);
   ZALLOC (enew, m, double);
-  ZALLOC (xrow, n, double);
+  ZALLOC (oldffv, n, double);
   ZALLOC (ffvec, n, double);
   ZALLOC (ffvecs, numeigs * n, double);
   ZALLOC (fxvecs, numeigs * n, double);
 
   ZALLOC (sold, numeigs * m, double);
   ZALLOC (snew, numeigs * m, double);
-  ZALLOC (ss, numeigs * numindivs, double);
+  ss = xcoeffs ; 
 
+  if ( (XTX != NULL)  && (m == nrxtx)) { 
+    xmat = XTX ; 
+  }
+// can we copy XTX
+
+ else {
+  printf(" (doshrinkp) *** recomputing xmat\n") ;
   for (i = 0; i < m; i++) {
     for (j = 0; j < m; j++) {
       for (k = 0; k < n; ++k) {
@@ -3645,50 +4286,53 @@ doshrinkp (double *mmat, int m, int n, int *xindex, SNP ** xsnplist)
       }
     }
   }
+ }
 
   yscale = y = trace (xmat, m) / (double) (m - 1);
   printf ("trace:  %9.3f\n", y);
+  fflush(stdout) ; 
   if (y <= 0.0)
     fatalx ("mmat has zero trace (perhaps no data)\n");
-  vst (xmat, xmat, 1.0 / y, m * m);
-  printdiag (xmat, m);
+   vst (xmat, xmat, 1.0 / y, m * m);  // force mean eigenvalue to be 1 
+
   eigvecs (xmat, lambda, evecs, m);
-  printf ("lambda sum: %9.3f\n", asum (lambda, m));
+
+
+ if (toprightindex >=0) {  
+  for (j=0; j< numeigs; ++j) { 
+   if (flip == NULL) break ; 
+   if (flip[j] != 1) continue ; 
+    xpt = evecs + j*nrows ; 
+    vst(xpt, xpt, -1, nrows) ; 
+    printf("(shrinkp) eigenvector %d flipped!\n", j+1) ;
+   }
+  }
+  
 
   for (i = 0; i < numeigs; i++) {
     evec = evecs + i * m;
     norme (evec, m);
-    lam = lambda[i];
-    mulmat (ww, evec, xmat, 1, m, m);
-    vst (ww, ww, 1.0 / lam, m);
-    norme (ww, m);
-    copyarr (ww, sold + i * m, m);
 
-    mulmat (ffvec, evec, mmat, 1, m, n);
+    mulmat (ffvec, evec, mmat, 1, m, n);  // work m*n*numeigs  (not too bad)  ffvecs is numeigs*n  
     y = asum2 (ffvec, n) / (double) n;
     vst (ffvecs + i * n, ffvec, 1.0 / sqrt (y), n);
   }
 
-//  printf ("debugstart\n");
   for (i = 0; i < numindivs; i++) {
     doproj (ww, i, xsnplist, ffvecs, numeigs, n);
-    printf ("zzzdebug %4d:  %12.6f %12.6f\n", i, ww[0], ww[1]);
     for (j = 0; j < numeigs; ++j) {
       ss[j * numindivs + i] = ww[j];
     }
   }
-  printf ("debugend\n");
-// old style projection onto eigenvectors
-// normalized eigenvector 
 
-// these 2 lines are just to be uniform with snew
+  copyarr (ffvecs, fxvecs, numeigs * n);
   for (i = 0; i < numeigs; i++) {
     evec = evecs + i * m;
     lam = lambda[i];
     mulmat (ww, evec, xmat, 1, m, m);
     vst (ww, ww, 1.0 / lam, m);
     norme (ww, m);
-    copyarr (ww, sold + i * m, m);
+    copyarr (ww, sold + i * m, m);   // redundant but uniform with snew 
 
     for (a = 0; a < m; a++) {
       vst (dv1, xmat + a * m, -1, m);
@@ -3698,8 +4342,6 @@ doshrinkp (double *mmat, int m, int n, int *xindex, SNP ** xsnplist)
       }
       mulmat (ww, dd, evec, m, m, 1);
       delta = vdot (ww, evec, m);
-      if (debug)
-        printf ("zz1 %15.9f %15.9f %15.9f\n", dv1[0], asum (dv1, m), delta);
       vzero (ediff, m);
       for (k = 0; k < m; k++) {
         if (k == i)
@@ -3709,41 +4351,36 @@ doshrinkp (double *mmat, int m, int n, int *xindex, SNP ** xsnplist)
         vst (w2, evecs + k * m, eco, m);
         vvp (ediff, ediff, w2, m);
       }
-//    printf ("a: %d  i: %d\n", a, i);
-//    printf ("lam, delta: %9.3f %9.3f\n", lam, delta);
       if (lam > delta) {
         ymul = lam / (lam + delta);
       }
+
       else {
         ymul = 1.0;
         printf ("*** bad delta  -- negative eigenvalue!\n");
+        printf ("a: %d  i: %d\n", a, i);
+        printf ("lam, delta: %9.3f %9.3f\n", lam, delta);
       }
+
       vvp (enew, evec, ediff, m);
       enew[a] = 0;
       y = asum (enew, m) / (double) (m - 1);
       vsp (enew, enew, -y, m);
       enew[a] = 0;
       norme (enew, m);
-/**
-      for (k = 0; k < m; k++) {
-        printf ("%3d: ", k);
-        cc = ' ';
-        if (k == a)
-          cc = '*';
-        printf ("%c ", cc);
-        printf ("%9.3f %9.3f %9.3f", evec[k], ediff[k], enew[k]);
-        printnl ();
-      }
-*/
+
       mulmat (ffvec, enew, mmat, 1, m, n);
       y = asum2 (ffvec, n) / (double) n;
       vst (ffvec, ffvec, 1.0 / sqrt (y), n);
-      copyarr (ffvecs, fxvecs, numeigs * n);
-      copyarr (ffvec, fxvecs + i * n, n);
-      if ((a == 3) && (i == 0))
-        cpr (ffvecs + i * n, ffvec, n);
+      fxv = fxvecs + i*n ; 
+      copyarr(fxv, oldffv, n) ;
+      copyarr (ffvec, fxv, n);
       doproj (ww, xindex[a], xsnplist, fxvecs, numeigs, n);
       snew[i * m + a] = ww[i] * ymul;
+      copyarr(oldffv, fxv, n) ;
+
+// why don't we make a new fxvecs and call doproj just once?  
+
     }
   }
 
@@ -3757,30 +4394,9 @@ doshrinkp (double *mmat, int m, int n, int *xindex, SNP ** xsnplist)
     }
   }
 
-/**
-   for (i=0; i<numindivs; i++) { 
-    t = findfirst(xindex, m, i) ;
-    if (t>=0) continue ;  
-    doproj(ww, i, xsnplist, ffvecs, numeigs, n) ;
-    for (j=0; j<numeigs; j++) {
-     ss[j*numindivs+i] = ww[i] ;
-    }
-   }
-*/
-
-  printf ("shrink output\n");
-  for (i = 0; i < numindivs; ++i) {
-    printf ("%3d: ", i);
-    for (j = 0; j < numeigs; j++) {
-      printf ("%9.3f ", ss[j * numindivs + i]);
-    }
-    printnl ();
-  }
-
+  if (verbose) printf("zzevecs p0\n") ;
   printevecs (xsnplist, indivmarkers, indivmarkers,
               numindivs, n, numindivs, numeigs, ss, lambda, ofile);
-
-
 
   free (xmat);
   free (evecs);
@@ -3793,11 +4409,12 @@ doshrinkp (double *mmat, int m, int n, int *xindex, SNP ** xsnplist)
   free (sold);
   free (snew);
   free (enew);
+  free (oldffv) ;
   free (ffvec);
-  free (ss);
   free (ffvecs);
   free (fxvecs);
-  printf ("doshrink exited\n");
+  y = cputimes(1, 2) ;
+  printf ("doshrink exited :: cpu time : %9.3f\n", y);
   fflush (stdout);
 }
 
@@ -3821,7 +4438,54 @@ int setnstw(double *lambda, int len, int nostatslim)
 
 
 }
-void estedgar(double *edgarw, double *lambdav, int lentop, int lenspec, double gamm)
+void estrounak(double *edgarw, double *lambdav, int lentop, int lenspec, double gamm, double yjfac)
+{
+
+ double *top  ; 
+ double *w1, *lam, lambda ; 
+ double mphat, vphat, dphat, y, y1, y2, y0, ytemp ;
+ int i, j, len, jnum ;
+
+ if (lentop <= 0) return ;
+ len = lentop + lenspec ;
+ printf("zzz %d %d %9.3f\n", lentop, len, gamm) ; 
+ ZALLOC(w1, len, double) ; 
+ ZALLOC(lam, len, double) ; 
+ copyarr(lambdav, lam, len) ;     
+ y = bal1(lam, len) ;    
+// scales lam to have sum 1    
+//  printf("rounak: sum: %9.3f\n", y)  ; 
+/** 
+Rounak's R code
+temp=temp+samp.eval[j]/(samp.eval[i]-samp.eval[j])
+spike.est[i]<-samp.eval[i]/(1+(gamma/(p-m))*temp)
+*/ 
+ top = lam ;  
+  for (i=0; i<lentop; ++i) {  
+   ytemp = 0 ; 
+   lambda = top[i] ;  
+   jnum = 0 ; 
+   for (j=lentop; j<len; ++j) { 
+     y0  = top[j] / (lambda - top[j]) ; 
+//   printf("zzmul: %4d %12.6f %12.6f %12.6f\n", j, lambda, top[j], y0) ; 
+     ytemp += y0 ;
+     ++jnum ; 
+   } 
+   printf("zzrounak: %d %12.6f %12.6f %12.6f\n", i, top[i] * (double) len, ytemp, yjfac) ;  
+// ytemp is scale invariant 
+   y1 = gamm/(double) yjfac ;  
+   y1 *= ytemp ;   
+   edgarw[i] = y2 = 1.0/(1.0+y1) ; 
+   printf("ytemp y1 y2: %9.3f %9.3f %9.3f\n", ytemp, y1, y2) ; 
+// y2 should be shrinkage factor
+  }
+
+  free(w1) ;
+  free(lam) ;
+
+} 
+
+void estedgar(double *edgarw, double *lambdav, int lentop, int lenspec, double gamm, double yjfac)
 {
 
  double *top  ; 
@@ -3830,13 +4494,19 @@ void estedgar(double *edgarw, double *lambdav, int lentop, int lenspec, double g
  double mphat, vphat, dphat, y ;
  int i, len ;
 
+ if (rounakmode) { 
+  estrounak(edgarw, lambdav, lentop, lenspec, gamm, yjfac) ; 
+  return ; 
+
+
+ }
  if (lentop <= 0) return ;
  len = lentop + lenspec ;
  ZALLOC(w1, len, double) ; 
  ZALLOC(lam, len, double) ; 
  copyarr(lambdav, lam, len) ;     
  y = bal1(lam, len) ; 
- printf("edgar: sum: %9.3f\n", y)  ; 
+//  printf("edgar: sum: %9.3f\n", y)  ; 
  top = lam ;  
  spec = top + lentop ; 
   for (i=0; i<lentop; ++i) {  
@@ -3859,3 +4529,284 @@ void estedgar(double *edgarw, double *lambdav, int lentop, int lenspec, double g
   free(lam) ;
 
 } 
+int mpestimate(double *eigs, int neigs, double *peffect, double *psigma)
+{
+// eigs sorted in descending order 
+ double qlo, qhi, qmed, qrat, xmed ; 
+ double y, yn ; 
+ 
+ int x, t ; 
+
+ static int ntab = 0 ;
+
+ static double **mptable = NULL ; 
+ double *gval, *rat, *med ; 
+
+ *peffect = *psigma = 0 ; 
+
+ if (neigs < 10) return -1 ;
+// y interpolate here 
+ qhi  = quartile(eigs, neigs, 0.75) ;
+ qmed = quartile(eigs, neigs, 0.50) ;
+ qlo  = quartile(eigs, neigs, 0.25) ;
+
+ qrat = (qhi-qlo)/qmed ; 
+ printf("mpstats: ") ; 
+ printf("%9.3f", qlo) ;
+ printf("%9.3f", qmed) ;
+ printf("%9.3f", qhi) ;
+ printf("%12.6f", qrat) ;
+ printnl() ; 
+
+ if (ntab == 0) ntab = loadmptable(&mptable) ;
+
+ gval = mptable[0] ; 
+ rat  = mptable[4] ;
+ med =  mptable[2] ;  
+ t = qinterp(rat, gval, ntab, qrat, &y) ; 
+ if (t<=0) y = 1.0e-6 ; 
+ *peffect =  (double) neigs / y ;   
+
+ t = qinterp(gval, med, ntab, y, &xmed) ;
+ *psigma = xmed/qmed ; 
+// printf("zzmp :: %12.6f %12.6f\n", y, xmed) ; 
+
+ return 1 ; 
+
+}
+
+void
+countsn(int *blcnt, int nblocks, SNP **snplist, int nsnps, int ind)  
+{
+  SNP *cupt ; 
+  int i, t, g ; 
+  static int ncall = 0 ;
+
+  ++ncall ;
+
+  ivzero(blcnt, nblocks) ;
+  for (i=0; i<nsnps; ++i) { 
+   cupt = snplist[i] ; 
+   if (ncall == -99) printf("snp: %s %d %d %d\n", cupt -> ID, cupt -> chrom, cupt -> tagnumber, cupt -> ignore) ;
+   if (cupt -> ignore) continue ; 
+   t = cupt -> tagnumber ; 
+/**
+   if ((i==0) || (i == (nsnps-1))) {
+    printf("snp: %s %d %d\n", cupt -> ID, cupt -> chrom, cupt -> tagnumber) ;
+   }
+*/
+   if (t<0) continue ; 
+   if (t>=nblocks) fatalx("countsn overflow %d %d\n", t, nblocks) ;
+   g = getgtypes(cupt, ind) ; 
+   if (g>=0) ++blcnt[t] ; 
+  }
+//if (ncall == 1) printimat(blcnt, 1, nblocks) ; 
+}
+ 
+void lsqproj(int blocknum, SNP **xsnplist, int ncols, Indiv **xindlist, int nind, 
+  double *fxscal, double *ffvecs, double * acoeffs, double *bcoeffs,int *xtypes, int numeg) 
+
+{
+
+ int qk, i, k, kk, j ; 
+ double *azq, *bzq ; 
+ double y ;
+ static double *xrow, *trow, *rhs, *emat, *regans ; 
+ Indiv *indx ; 
+ SNP *cupt ; 
+ int t, u, x  ; 
+ double *xnum, *xden ; 
+ 
+ static int ncall = 0 ;
+
+ fflush(stdout) ;
+ if (!regmode) return ; 
+
+  ++ncall ; 
+
+    if (ncall==1) {
+      ZALLOC (trow, ncols, double);
+      ZALLOC (xrow, ncols, double);
+      ZALLOC (rhs, ncols, double);
+      ZALLOC (emat, ncols * numeigs, double);
+      ZALLOC (regans, numeigs, double);
+      printf("lsqproj called!\n") ;
+
+     for (qk = 0; qk < nind; qk++) {
+      indx = xindlist[qk];
+      i = indx -> idnum ; 
+      if (indx->ignore) continue;
+      t = xtypes[i] ; 
+      if (t<0) continue ; 
+      x = numvalids(indx, xsnplist, 0, ncols-1) ;
+      if (printcover) printf("coverage: %8s %20s %7d\n", indx -> ID, indx -> egroup, x) ; 
+
+      if (x <= numeigs) {
+        indx->ignore = YES;
+        printf ("%s ignored (insufficient data\n", indx->ID);
+        continue;
+      }
+     }
+    }
+
+    vzero(trow, ncols) ;
+    vzero(xrow, ncols) ;
+    vzero(rhs, ncols) ;
+    vzero(emat, ncols*numeigs) ;
+    vzero(regans, numeigs) ;
+
+    if (usepopsformissing) { 
+      ZALLOC(xnum, numeg*ncols, double) ; 
+      ZALLOC(xden, numeg*ncols, double) ; 
+
+     for (qk = 0; qk < nind; qk++) {
+      indx = xindlist[qk];
+      i = indx -> idnum ; 
+      if (indx->ignore) continue;
+      loadxdataind (xrow, xsnplist, i, ncols);
+      t = xtypes[i] ; 
+      if (t<0) continue ;
+      for (j=0; j<ncols; ++j) { 
+       if (xrow[j]>=0) { 
+         xnum[t*ncols+j] += xrow[j] ; 
+         xden[t*ncols+j] += 1 ; 
+       }
+      }
+    }
+   }
+
+    for (qk = 0; qk < nind; qk++) {
+      indx = xindlist[qk];
+      i = indx -> idnum ; 
+      if (indx->ignore) continue;
+      loadxdataind (xrow, xsnplist, i, ncols);
+      if (usepopsformissing) { 
+        t = xtypes[i] ; 
+        for (j=0; j<ncols; ++j) { 
+         if (t<0) break ; 
+         u = t*ncols + j ; 
+         if ((xrow[j]<0) && (xden[u] > 0.1)) {
+          xrow[j] = xnum[u]/xden[u] ; 
+        }
+       }
+      }
+
+      copyarr (xrow, trow, ncols);
+      fixxrow (xrow, xmean, xfancy, ncols);
+
+      kk = 0;
+      for (k = 0; k < ncols; ++k) {
+        cupt = xsnplist[k] ; 
+        if (cupt -> tagnumber < 0) continue ; 
+
+        if ((blocknum >= 0) && (blocknum == cupt -> tagnumber)) continue ; 
+        if (trow[k] < 0) continue;
+        rhs[kk] = xrow[k];
+        for (j = 0; j < numeigs; j++) {
+          emat[kk * numeigs + j] = fxscal[j] * ffvecs[j * ncols + k];
+        }
+        ++kk;
+      }
+      if (kk <= numeigs) {
+        indx->ignore = YES;
+        printf ("%s ignored (insufficient data\n", indx->ID);
+        continue;
+      }
+      regressit (regans, emat, rhs, kk, numeigs);
+      for (j = 0; j < numeigs; ++j) {
+        acoeffs[j * nind + qk] = regans[j];
+      }
+    }
+
+
+    for (qk = 0; qk < nind; qk++) {
+      if (bcoeffs == NULL) break ; 
+      
+      indx = xindlist[qk];
+      i = indx -> idnum ; 
+      if (indx->ignore) continue;
+      loadxdataind (xrow, xsnplist, i, ncols);
+
+      if (usepopsformissing) { 
+       t = xtypes[i] ; 
+       for (j=0; j<ncols; ++j) { 
+        if (t<0) break ;
+        u = t*ncols + j ; 
+        if ((xrow[j]<0) && (xden[u] > 0.1)) {
+         xrow[j] = xnum[u]/xden[u] ; 
+       }
+      }
+     }
+
+      fixxrow (xrow, xmean, xfancy, ncols);
+
+      for (j = 0; j < numeigs; j++) {
+        y = fxscal[j] * vdot (xrow, ffvecs + j * ncols, ncols);
+        bcoeffs[j * numindivs + qk] = y;
+      }
+
+    }
+
+    if (usepopsformissing) { 
+      free(xnum) ; 
+      free(xden) ;
+    }
+
+    return ; 
+
+}
+void seteigscale(double *eigscale, double *acoeffs, double *bcoeffs, int *xindex, int nrows, int numeigs)  
+{
+     double *azq, *bzq ; 
+     double *apt, *bpt ; 
+     int j ; 
+
+
+     ZALLOC (azq, nrows * numeigs, double);
+     ZALLOC (bzq, nrows * numeigs, double);
+
+     sqz (azq, acoeffs, numeigs, nrows, xindex);
+     sqz (bzq, bcoeffs, numeigs, nrows, xindex);
+
+    for (j = 0; j < numeigs; ++j) {
+// rescale a to match b  
+
+      apt = azq + j * nrows;
+      bpt = bzq + j * nrows;
+      eigscale[j] = vdot (apt, bpt, nrows) / vdot (apt, apt, nrows);
+    }
+
+    free(azq) ; 
+    free(bzq) ;  
+
+}
+
+void
+printmega(char *outname, char **eglist, int numeg, double *fstsc) 
+{
+ FILE *fff ;
+ int i, j ; 
+ double y ; 
+
+ if (outname == NULL) return ;  
+ openit(outname, &fff, "w") ; 
+
+ fprintf(fff, "#mega\n") ;
+ fprintf(fff, "!TITLE distance for %d samples ;", numeg) ; 
+ fprintf(fff, "\n\n") ; 
+
+ for (i=0; i<numeg; i++) { 
+  fprintf(fff, "#%s\n", eglist[i]) ; 
+ }
+
+ fprintf(fff, "\n\n") ; 
+ for (i=0; i<numeg; i++) { 
+  for (j=0; j<i; j++) { 
+   y = fstsc[i*numeg+j] ;
+   y = MAX(y, 0) ;
+   fprintf(fff, "  %9.6f", y) ;
+  } 
+  fprintf(fff, "\n") ;
+ }
+ fclose(fff) ;
+}

@@ -315,14 +315,24 @@ ranmod (int n)
 
   long r, big;
 
-  if (n == 0)
-    fatalx ("ranmod(0) called\n");
+  if (n <= 0)
+    fatalx ("ranmod called; bad arg %d\n", n);
   if (n == 1)
     return 0;
   big = (2 << 29) - 1;
   r = LRAND ();
   r %= big;
   return (r % n);
+
+}
+
+int iranpick(int lo, int hi) 
+{
+ int l ;  
+
+ l = hi - lo + 1 ; 
+ if (l <= 0) fatalx("(iranpick) bad interval %d %d\n", lo, hi) ;
+ return lo + ranmod(l) ;  
 
 }
 
@@ -420,7 +430,8 @@ ranpoiss1 (double xm)
 
 /* poisson variable conditioned on x>0 */
 
-/** xm should be small here 
+/** 
+ xm should be small here 
  ranpoissx is the driver. 
  Don't call this directly
 */
@@ -452,7 +463,7 @@ ranpoiss1 (double xm)
 
 void
 genmultgauss (double *rvec, int num, int n, double *covar)
-// rvec contains num mvg variates
+// rvec contains num mvg variates.  Mean 0
 {
   double *cf;
   ZALLOC (cf, n * n, double);
@@ -655,10 +666,10 @@ prob1 (double p)
   double z;
 
   if ((p < 0) || (p > 1))
-    fatalx ("bad p %12.6f\n", p);
+    fatalx ("(prob1) bad p %12.6f\n", p);
   z = DRAND2 ();
-  if (z < p)
-    return YES;
+
+  if (z < p) return YES;
 
   return NO;
 }
@@ -731,21 +742,17 @@ rejnorm (double lo, double hi)
   int iter = 0, iterlim = 1000 * 1000;
   double y;
 
+  if (lo==hi)  return lo ;
+  if (lo>hi) fatalx("(rejnorm) bad bounds\n") ;
+
   for (;;) {
     ++iter;
     if (iter == iterlim)
       fatalx ("(rejnorm) looping\n");
     y = gauss ();
-    if (lo >= 0)
-      y = abs (y);
-    if (hi <= 0)
-      y = -abs (y);
-    if (y < lo)
-      continue;
-    if (y > hi)
-      continue;
-    return y;
+    if ((lo<=y) && (y<=hi)) return y ;  
   }
+  return 0 ;
 }
 
 
@@ -777,6 +784,29 @@ ranboundnorm (double lo, double hi)
 
 }
 
+double rtrunc2(double thresh)
+// Botev and Ecuyer.  Algorithm 5
+{
+
+  double a, c, q, u, v, x, y ;
+  int iter = 0 ;
+
+  a = thresh ;
+  c = a*a/2 ;
+
+  for (;;) {
+   u = DRAND2() ;
+   v = DRAND2() ;
+   if (u==0.0) continue ;
+   x = c - log(u) ;
+   y = v*v*x ;
+   if (y > a) continue ;
+   return sqrt(2*x) ;
+  }
+
+}
+
+
 double
 rantruncnorm (double T, int upper)
 // random normal | > T (upper = 1)
@@ -789,6 +819,8 @@ rantruncnorm (double T, int upper)
   y = ntail (T);
   if (y > 0.1)
     return rejnorm (T, 1.0e6);
+  if (T>5.0) return rtrunc2(T) ;
+
   u = DRAND2 ();
   if (u == 0.0)
     u = 0.5;                    // tiny hack   
@@ -813,6 +845,9 @@ ranhprob (int n, int a, int m)
   double y;
   double pm, logpm, w, ru, rw, rat;
   int mode, k, x, zans;
+
+  if (m<=0) return 0 ; 
+  if (m>n) return -1 ; 
 
   mode = modehprob (n, a, m);
   logpm = loghprob (n, a, m, mode);
@@ -850,5 +885,21 @@ void setrand (double *ww, int n)
     ww[k] = DRAND ();
   }
 }
+
+double rangeom (double theta) 
+{
+// sample # trials until success  prob theta.  Min value 1
+// Knuth Vol 2, page 131;  Mean of random variable 1/theta
+// note returns double (dangerous bend) 
+double y ; 
+
+ if (theta == 1.0) return 1 ; 
+ if (theta <= 0.0) fatalx("bad rangeom parameter\n") ;
+  
+ y = -ranexp() / log(1-theta) ; 
+ return ceil(y) ; 
+
+}
+ 
 
 

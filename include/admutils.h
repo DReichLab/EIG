@@ -169,6 +169,8 @@ int ridfile (char *fname);
 double hwcheck (SNP * cupt, double *cc);
 double hwcheckx (SNP * cupt, Indiv ** indm, double *cc);
 void cntit (double *xc, SNP * cupt1, SNP * cupt2);
+int setid2pops (char *idpopstring, Indiv ** indmarkers, int numindivs) ;
+
 // dup routines 
 void setfastdupnum (int num);
 void setfastdupthresh (double thresh, double kill);

@@ -33,9 +33,10 @@ NLIB = $(ND)/libnick.a
 # ----- phony targets
 .PHONY: all clean clobber install
 
-EXE = baseprog convertf mergeit pca smshrink \
+EXE = baseprog convertf mergeit pca \
 	$(ED)/pcatoy $(ED)/smartrel $(ED)/smarteigenstrat \
-	$(ED)/twstats $(ED)/eigenstrat $(ED)/eigenstratQTL $(ED)/smartpca
+	$(ED)/twstats $(ED)/eigenstrat $(ED)/eigenstratQTL $(ED)/smartpca \
+	smartpca 
 
 all:    $(EXE)
 
@@ -77,8 +78,5 @@ $(ED)/smartpca:	$(ED)/smartpca.o $(ED)/eigsubs.o $(ED)/exclude.o $(ED)/smartsubs
           	$(KD)/kjg_fpca.o $(KD)/kjg_gsl.o 
           	#-lpthread
 
-smshrink:		smshrink.o $(ED)/eigsubs.o $(ED)/exclude.o $(ED)/smartsubs.o $(ED)/eigx.o \
-		twsubs.o mcio.o qpsubs.o admutils.o egsubs.o regsubs.o gval.o \
-		$(NLIB) \
-          	$(KD)/kjg_fpca.o $(KD)/kjg_gsl.o
-
+smartpca:   $(ED)/smartpca
+	cp $(ED)/smartpca smartpca

@@ -10,6 +10,7 @@ static void wjackvestx (double *vest, double *var, int d, double *mean,
 static void calcndinbreed (int *c1, int *c2, double *pen, double *ped);
 static void calchetinbreed (int *c1, double *pen, double *ped);
 static int inbreed = NO;
+static int fstsnpout = NO ; 
 
 void
 printsc (int tpat[3][4], double tscore[3], char **eglist, double ymin)
@@ -324,8 +325,10 @@ loadxdataind (double *xrow, SNP ** snplist, int ind, int ncols)
   Indiv *indx;
   int i, j, k, n, g;
 
+  vclear(xrow, -1, ncols) ; 
   for (i = 0; i < ncols; i++) {
     cupt = snplist[i];
+    if (cupt -> ignore) continue; 
     g = getgtypes (cupt, ind);
     xrow[i] = (double) g;
   }
@@ -2482,7 +2485,7 @@ doinbreed (double *inb, double *inbest, double *inbsig, SNP ** xsnplist,
 }
 
 double
-dofstnumx (double *fst, double *fstest, double *fstsig, SNP ** xsnplist,
+dofstnumx (double *fst, double *fstest, double *fstsig, int *qfstnum, SNP ** xsnplist,
            int *xindex, int *xtypes, int nrows, int ncols, int numeg,
            int nblocks, Indiv ** indivmarkers, int fstmode)
 // fstmode is classic mode (smartpca)
@@ -2504,6 +2507,7 @@ dofstnumx (double *fst, double *fstest, double *fstsig, SNP ** xsnplist,
   int bnum;
   int nloop = 0, fstdnum = 0;
   double *ztop, *zbot, qtop, qbot;
+  int *fstnum ; 
   char **eglist;
 
   indm = indivmarkers;
@@ -2534,6 +2538,7 @@ dofstnumx (double *fst, double *fstest, double *fstsig, SNP ** xsnplist,
   ZALLOC (wjack, nblocks, double);
   ZALLOC (ztop, numeg * numeg, double);
   ZALLOC (zbot, numeg * numeg, double);
+  ZALLOC (fstnum, numeg * numeg, int);
   btop = initarray_2Ddouble (nblocks, numeg * numeg, 0.0);
   bbot = initarray_2Ddouble (nblocks, numeg * numeg, 0.0);
 
@@ -2543,6 +2548,7 @@ dofstnumx (double *fst, double *fstest, double *fstsig, SNP ** xsnplist,
   vzero (fst, numeg * numeg);
   vzero (fstest, numeg * numeg);
   vzero (fstsig, numeg * numeg);
+  ivzero (fstnum, numeg * numeg);
 
 
   for (col = 0; col < ncols; ++col) {
@@ -2566,7 +2572,7 @@ dofstnumx (double *fst, double *fstest, double *fstsig, SNP ** xsnplist,
         k = a * numeg + b;
         ytop = ztop[k];
         ybot = zbot[k];
-        if (fstdetails != NULL) {
+        if (fstsnpout && (fstdetails != NULL)) {
           if (fstdnum == 0) {
             fprintf (fstdetails, "%20s ", "## pop 1");
             fprintf (fstdetails, "%20s ", "pop 2");
@@ -2593,6 +2599,7 @@ dofstnumx (double *fst, double *fstest, double *fstsig, SNP ** xsnplist,
         if (ybot < 0.0)
           continue;
 
+        ++fstnum[k] ;
 
         if (fstmode == NO) {
           top[k] += wt * ytop;
@@ -2623,6 +2630,7 @@ dofstnumx (double *fst, double *fstest, double *fstsig, SNP ** xsnplist,
       bot[b * numeg + a] = bot[a * numeg + b];
       w1[b * numeg + a] = w1[a * numeg + b];
       w2[b * numeg + a] = w2[a * numeg + b];
+      fstnum[b*numeg+a] = fstnum[a*numeg+b] ;
     }
   }
 
@@ -2649,6 +2657,7 @@ dofstnumx (double *fst, double *fstest, double *fstsig, SNP ** xsnplist,
   vsp (gbot, gbot, 1.0e-10, numeg * numeg);
   vvd (gtop, gtop, gbot, numeg * numeg);
 
+  copyarr(gtop, fst, numeg*numeg) ;
 
   for (i = 0; i < numeg; i++) {
     for (j = i + 1; j < numeg; j++) {
@@ -2703,6 +2712,9 @@ dofstnumx (double *fst, double *fstest, double *fstsig, SNP ** xsnplist,
     vst (fstsig, fstsig, yscal, numeg * numeg);
   }
 
+  if (qfstnum != NULL) copyiarr(fstnum, qfstnum, numeg*numeg) ;
+ 
+  free(fstnum) ;
   free (eglist);
   free (w1);
   free (w2);
@@ -2729,7 +2741,7 @@ dofstnum (double *fst, double *fstest, double *fstsig, SNP ** xsnplist,
           int nblocks)
 {
 
-  dofstnumx (fst, fstest, fstsig, xsnplist, xindex, xtypes, nrows, ncols,
+  dofstnumx (fst, fstest, fstsig, NULL, xsnplist, xindex, xtypes, nrows, ncols,
              numeg, nblocks, NULL, NO);
 
 }
@@ -2769,6 +2781,12 @@ setgfromp (SNP ** snpm, int numsnps)
     cupt = snpm[i];
     cupt->genpos = (cupt->physpos) / 1.0e8;
   }
+}
+
+void setfstsnpout(int val) 
+{
+ fstsnpout = val ;
+
 }
 
 void

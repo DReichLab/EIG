@@ -151,6 +151,9 @@ fstonly: If set to YES, then skip PCA and just calculate FST values.
   The default value for this parameter is NO.
 fstdetailsname:  mybig.out 
  Outputs details for fst including estimates for each SNP 
+*** NEW *** 
+hiprecision:  YES  
+(default no) ;  Eigenvectors are written out with 2 more decimal places
 
 *** fst options: 
 inbreed: YES  (default NO) 
@@ -217,10 +220,11 @@ mode = 1  when calculating mean and standard deviation of a PC to decide whether
 mode = 0  (default) use all samples to compute PC mean and variance. 
 
 lsqproject:  YES 
-PCA projections is carried out by solving least squares equations rather than an orthogonal 
+PCA projection is carried out by solving least squares equations rather than an orthogonal 
 projection step.  This is approriate if PCs are calculated using samples with little missing data 
 but it is desired to project samples with much missing data onto the top PCs. 
 See ./lsqproject.pdf for a more detailed description.
+*** NEW *** lsqproject: NO is no longer supported as it does not seem useful (but see fastmode).
 
 fastmode: YES
 Fast pca approximation is used.  See Galinsky 2014 ASHG talk.  In fastmode,
@@ -241,7 +245,6 @@ By default a (hopefully) system dependent number of threads is chosen.
 This can be overwritten by (for example)
 numthreads:   10
 
-(NEW) 
 shrinkmode: YES  (default NO) 
 A problem with smartpca is that samples used to calculate the PC axes 
 "stretch" the axes.  So that 2 populations in fact genetically identical 
@@ -250,6 +253,42 @@ if one is used to compute axes, and one not.  shrinkmode: YES is an attempt
 to solve this problem.  Details to appear later, but this has been used successfully 
 in the Reich lab.
 *** warning *** shrinkmode is slow and will greatly increase the runtime. 
+(NEW) New version:  newshrink:  YES technical variation of shrinkmode,  should be (slightly) 
+
+(NEW) elliptical confidence ellipses.  
+*** numoutevec MUST be 2.  (May improve this at some time.  
+To get confidence ellipses code 
+elllistname:  <list> 
+list should be a set of sample ID's.  Not too many or the output picture will be too complicated.  
+elloutname:   <ellout>  
+#output file -- needed for plotting 
+ellconf:      0.95  
+A 0.95 confidence region will be plotted.  
+
+Example in ~/eig_github/POPGEN/elldemo g
+
+*** format of <ellout>  
+A series of records -- here is an example 
+sample:                I7796
+   -0.046873995    -0.022889046 
+   -0.046872172    -0.022888735 
+
+    0.000123822     0.000000197 
+    0.000000197     0.000069837 
+ellcoords:    -0.0469    -0.0229     0.027237428     0.020455347    -0.003650390  ::     0.950
+The 4 data lines after sample
+are  
+Mean coordinates 
+Jacknifed mean 
+2 x 2 Covariance. 
+The line marked "ellcoords:" has 
+(mean coordinates sem-major and minor axes and angle beween major axis and X-axis in radians.  
+
+To plot use ploteig with new flag -e <ellout> 
+
+
+
+
 
 Alternate shrink option.  
  We implemented a new method (Liu, Dobriban, Singer: https://arxiv.org/pdf/1611.05550.pdf) ) of eigenvalue shrinkage 
@@ -259,6 +298,12 @@ This costs little in CPU, but the results seem slightly worse than shrinkmode: Y
 Sample runs and output of shrinkage can be found on 
 [https://reich.hms.harvard.edu/sites/reich.hms.harvard.edu/files/inline-files/shrinkdemo.tar.gz] 
 
+(NEW) 
+Absolute limit in number of populations is 1000 (change #define MAXPOPS 1000 in .../eigensrc/smartpca.c) 
+but default is 100. 
+Code (say) 
+maxpops: 500  
+in parameter file to change.
 
 
 
@@ -273,17 +318,22 @@ in .xtxt (gnuplot control file) format, and in .ps and .pdf formats.
 Files for all output formats will be produced if -x flag is specified.
 
 The syntax of ploteig is
-../bin/ploteig 
+../o2bin/ploteig 
 -i example.evec : input file of eigenvectors
 -c 1:2 : which eigenvectors to plot.  Use 1:2 for top two eigenvectors.
 -p Case:Control : which populations from input file to plot.
+-g stem :  stem.pdf will be output (if -x flag) 
 -x : make .ps and .pdf files if -x flag is specified.
 -o plot.xtxt : gnuplot output file name.  MUST end in .xtxt.
                .ps and .pdf output files will have same prefix.
+-k  (keep intermediate files -- allows plot.xtxt to be edited 
+-r  ctable (gnuplot color table) 
+-e  ellout Plot ellipses  
+
 
 Example: see ./example.perl
 
-For documentation of optional flags to ploteig, type "../bin/ploteig" to
+For documentation of optional flags to ploteig, type "../o2bin/ploteig" to
 run ploteig with no input.  Documentation on optional flags will then appear.
 
 -----------------------------------------------------------------------

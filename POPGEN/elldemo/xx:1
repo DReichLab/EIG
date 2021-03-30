@@ -1,0 +1,198 @@
+parameter file: par1
+### THE INPUT PARAMETERS
+##PARAMETER NAME: VALUE
+DIR: /home/np29/broaddatax/v37/
+S1: test4
+indivname: /home/np29/broaddatax/v37//test4.ind
+snpname: /home/np29/broaddatax/v37//test4.snp
+genotypename: /home/np29/broaddatax/v37//test4.geno
+numoutliter: 0
+numoutevec: 2
+evecoutname: sicaa.evec
+phylipname: sicaa.phyl
+poplistname: test3
+inbreed: NO
+lsqproject: YES
+shrinkmode: YES
+hiprec: YES
+elllistname: ebalist
+elloutname: ell4aa.out
+ellconf: 0.95
+## smartpca version: 16610
+high precision evec output
+norm used
+
+lsqproject used
+shrinkmode set!
+packed geno read OK
+end of inpack
+nellindivs:   5
+I3122
+I11442
+I7796
+I7800
+I7807
+number of samples used: 60 number of snps used: 593124
+Using 27 threads, and partial sum lookup algorithm.
+ snp           rs78424188 ignored . allelecnt:     0  missing:     0
+ snp           rs61559999 ignored . allelecnt:     0  missing:     0
+ snp        snp_1_1330931 ignored . allelecnt:     0  missing:     0
+ snp          rs143379804 ignored . allelecnt:     0  missing:     0
+ snp            rs1046878 ignored . allelecnt:     0  missing:     0
+ snp        snp_1_1596979 ignored . allelecnt:     0  missing:     0
+ snp        snp_1_1603935 ignored . allelecnt:     0  missing:     1
+ snp           rs61774979 ignored . allelecnt:     0  missing:     0
+ snp           rs77305511 ignored . allelecnt:     0  missing:     0
+ snp          rs114770008 ignored . allelecnt:     0  missing:     0
+total number of snps killed in pass: 150595  used: 442529
+elllist: 10616048                I3122
+elllist: 10616240               I11442
+elllist: 10616432                I7796
+elllist: 10616624                I7800
+elllist: 10616816                I7807
+
+## Tracy-Widom statistics: rows: 60  cols: 593124
+  #N    eigenvalue  difference    twstat      p-value effect. n
+mpstats:     0.945    0.980    1.014    0.069699
+   1      1.773763          NA    51.043 1.37315e-107  3638.205
+   2      1.458381   -0.315382    51.977 1.67918e-110  8910.684
+   3      1.123662   -0.334719    10.996  2.14442e-12 20935.507
+   4      1.102180   -0.021482     8.220  1.25135e-08 23378.769
+   5      1.095415   -0.006765     8.945   1.4633e-09 25607.902
+   6      1.053119   -0.042296    -1.532      0.58395 28276.984
+   7      1.045520   -0.007599    -2.775     0.898892 29144.894
+   8      1.038465   -0.007055    -3.996      0.99235 29851.044
+   9      1.036048   -0.002416    -3.822     0.987936 30386.213
+  10      1.031415   -0.004633    -4.373     0.997462 30963.191
+  11      1.024851   -0.006564    -5.628     0.999982 31461.199
+  12      1.022996   -0.001855    -5.418     0.999952 31754.725
+  13      1.020484   -0.002512    -5.413     0.999951 32081.458
+  14      1.016100   -0.004384    -6.043     0.999998 32407.166
+  15      1.015333   -0.000767    -5.503     0.999968 32614.360
+  16      1.011945   -0.003388    -5.809     0.999993 32915.214
+  17      1.007414   -0.004531    -6.531            1 33149.435
+  18      1.005322   -0.002092    -6.482            1 33228.830
+  19      1.004121   -0.001201    -6.128     0.999999 33300.816
+  20      1.000082   -0.004040    -6.710            1 33429.853
+  21      0.999747   -0.000334    -6.082     0.999998 33413.761
+  22      0.995565   -0.004182    -6.706            1 33516.549
+  23      0.993627   -0.001939    -6.622            1 33450.988
+  24      0.990610   -0.003017    -6.892            1 33377.059
+  25      0.988442   -0.002168    -6.898            1 33206.380
+  26      0.986178   -0.002263    -6.935            1 32999.428
+  27      0.983800   -0.002378    -7.009            1 32745.641
+  28      0.982789   -0.001011    -6.640            1 32431.605
+  29      0.982222   -0.000567    -6.098     0.999998 32175.315
+  30      0.980095   -0.002127    -6.012     0.999997 32035.354
+  31      0.976442   -0.003653    -6.407            1 31878.637
+  32      0.974091   -0.002351    -6.418            1 31546.177
+  33      0.970916   -0.003174    -6.684            1 31154.815
+  34      0.969272   -0.001644    -6.492            1 30614.367
+  35      0.967437   -0.001836    -6.338            1 30074.146
+  36      0.964783   -0.002653    -6.415            1 29519.336
+  37      0.963654   -0.001129    -6.038     0.999998 28862.218
+  38      0.959429   -0.004225    -6.530            1 28271.519
+  39      0.957099   -0.002330    -6.507            1 27402.259
+  40      0.955362   -0.001737    -6.307            1 26452.913
+  41      0.953285   -0.002077    -6.175     0.999999 25490.174
+  42      0.950729   -0.002556    -6.150     0.999999 24482.720
+  43      0.947102   -0.003627    -6.385            1 23380.779
+  44      0.946576   -0.000526    -5.848     0.999994 22071.338
+  45      0.944078   -0.002498    -5.733     0.999989 20887.163
+  46      0.942235   -0.001843    -5.442     0.999957 19634.878
+  47      0.938107   -0.004129    -5.612     0.999981 18395.495
+  48      0.936633   -0.001474    -5.212     0.999882 16938.918
+  49      0.932646   -0.003987    -5.256     0.999903 15547.483
+  50      0.931580   -0.001065    -4.725     0.999221 13993.090
+  51      0.926713   -0.004867        NA           NA        NA
+  52      0.925903   -0.000810        NA           NA        NA
+  53      0.920736   -0.005167        NA           NA        NA
+  54      0.916291   -0.004445        NA           NA        NA
+  55      0.912963   -0.003327        NA           NA        NA
+  56      0.907408   -0.005555        NA           NA        NA
+  57      0.904410   -0.002998        NA           NA        NA
+  58      0.900746   -0.003664        NA           NA        NA
+  59      0.833684   -0.067063        NA           NA        NA
+    kurtosis           snps    indivs
+ eigenvector    1     3.801     1.237
+ eigenvector    2     4.228     4.183
+number of blocks for block jackknife (ell): 711
+doshrink called
+trace:  901086.379
+doshrink exited
+coeff multiplier (eigenvector 0):     2.117
+coeff multiplier (eigenvector 1):     2.995
+population:   0           Lithuanian   10
+population:   1             Georgian   23
+population:   2            Sardinian   27
+
+## Average divergence between populations:
+           Lithuanian   Georgian  Sardinian     popsize
+Lithuanian      0.995      1.045      1.027          10
+  Georgian      1.045      1.021      1.035          23
+ Sardinian      1.027      1.035      0.984          27
+
+
+number of blocks for block jackknife: 710
+
+fst *1000:
+          L     G     S 
+   L      0    20    21
+   G     20     0    18
+   S     21    18     0
+
+std. err.  * 1000000:
+          L     G     S 
+   L      0   426   424
+   G    426     0   307
+   S    424   307     0
+
+eigenvector 1:means
+           Sardinian     -0.133
+          Lithuanian      0.018
+            Georgian      0.149
+## Anova statistics for population differences along each eigenvector:
+                                              p-value
+                  eigenvector_1_overall_             0 +++
+            Sardinian minv:    -0.133             Georgian maxv:     0.149
+      eigenvector_1_Lithuanian_Georgian_             0 +++
+     eigenvector_1_Lithuanian_Sardinian_             0 +++
+       eigenvector_1_Georgian_Sardinian_   1.11022e-16 +++
+eigenvector 2:means
+            Georgian     -0.067
+           Sardinian     -0.049
+          Lithuanian      0.286
+                  eigenvector_2_overall_             0 +++
+             Georgian minv:    -0.067           Lithuanian maxv:     0.286
+      eigenvector_2_Lithuanian_Georgian_             0 +++
+     eigenvector_2_Lithuanian_Sardinian_             0 +++
+       eigenvector_2_Georgian_Sardinian_   5.83949e-05 ***
+
+## Statistical significance of differences beween populations:
+                                pop1                  pop2      chisq          p-value   |pop1|   |pop2|
+popdifference:            Lithuanian              Georgian       261.775   1.43299e-57      10      23
+popdifference:            Lithuanian             Sardinian       325.296   2.30635e-71      10      27
+popdifference:              Georgian             Sardinian       267.881   6.76527e-59      23      27
+
+eigbestsnp    1             rs435202 18     44240526     4.962
+eigbestsnp    1            rs4307032  4    118337656     4.943
+eigbestsnp    1           rs12424159 12    129189941     4.827
+eigbestsnp    1             rs902061 12    129189556     4.719
+eigbestsnp    1             rs168201 10     84610081     4.664
+eigbestsnp    1            rs2483307 10     84564127     4.659
+eigbestsnp    1           rs10983184  9    119234058     4.640
+eigbestsnp    1            rs9891383 17     73112767     4.600
+eigbestsnp    1             rs329483  2     64291780     4.573
+eigbestsnp    1            rs2820636 10      1500525     4.562
+eigbestsnp    2            rs4822878 22     27836311     5.898
+eigbestsnp    2            rs7812156  7    144909061     5.734
+eigbestsnp    2           rs74049078 11      3227697     5.728
+eigbestsnp    2            rs6078848 20     12947955     5.714
+eigbestsnp    2           rs78824189  5      6585451     5.678
+eigbestsnp    2            rs8084310 18      8950504     5.663
+eigbestsnp    2           rs11597160 10    132273788     5.544
+eigbestsnp    2            rs1484652 10    132274150     5.544
+eigbestsnp    2           rs35160199 10    132277690     5.544
+eigbestsnp    2            rs2240348  7     97984077     5.454
+##end of primary run 
+##end of smartpca:      390.100 seconds cpu      337.670 Mbytes in use

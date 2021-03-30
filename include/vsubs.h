@@ -27,6 +27,9 @@ void ivclear(int *a,  int c, long n) ;
 void lvclear(long *a,  long c, long n) ;
 void ivzero(int *a, int n) ;
 void lvzero(long *a, long n) ;
+void lvsp (long *a, long *b, long c, int n) ;
+void lvvp (long *a, long *b, long *c, int n) ;  
+void lvvm (long *a, long *b, long *c, int n) ;  
 void cclear(unsigned char *a,  unsigned char c, long n) ;
 void charclear(char *a,  unsigned char c, long n) ;
 
@@ -50,6 +53,7 @@ int ipow2 (int l) ;
 void copyarr(double *a,double *b,int n) ;
 void revarr(double *a, double *b,int n) ;
 void reviarr(int *a,int *b,int n) ;
+void revlarr(long *a,long *b,int n) ;
 void revuiarr(unsigned int *a, unsigned int *b,int n) ;
 void copyiarr(int *a,int *b,int n) ;
 void copylarr(long *a, long *b, int n) ;
@@ -83,15 +87,24 @@ void printmatwfile(double *a, int m, int n, int w, FILE *fff) ;
 void printmatx(double *a, int m, int n) ;
 void printmat(double *a, int m, int n) ;
 void printmatwx(double *a, int m, int n, int w) ;
+void printmatwxfile (double *a, int m, int n, int w, FILE *fff) ;
+
 void printmatw(double *a, int m, int n, int w) ;
 void printmatl(double *a, int m, int n) ;
 void printmatwl(double *a, int m, int n, int w) ;
+void printmatlx(double *a, int m, int n) ;
+void printmatwlx(double *a, int m, int n, int w) ;
 void printmatwf(double *a, int m, int n, int w, char *format);
 void int2c(char *cc, int *b, int n) ;
 void floatit(double *a, int *b, int n) ;
-void fixit(int  *a, double *b, int n) ;
+void floatitl (double *a, long *b, int n) ;
+void fixit(int *a, double *b, int n) ;
+void fixitl(long *a, double *b, int n) ;
 void rndit(double  *a, double *b, int n) ;
 void printimatw(int *a, int m, int n, int w) ;
+void printmatwlfile (double *a, int m, int n, int w, FILE *fff) ;
+void printmatwlxfile (double *a, int m, int n, int w, FILE *fff) ;
+void printmatlfile(double *a, int m, int n, FILE *fff)  ;
 void printimatx(int *a, int m, int n) ;
 void printimat1(int *a, int m, int n) ;
 void printimat1x(int *a, int m, int n) ;
@@ -101,6 +114,7 @@ void printimatlfile(int *a, int m, int n, FILE *fff) ;
 void printimatfile(int *a, int m, int n, FILE *fff) ;
 void printimatwfile(int *a, int m, int n, int w, FILE *fff) ;
 void printimat2D(int  **a, int m, int n)  ;
+void printlmat (long *a, int m, int n) ;
 void printmat2D(double **a, int m, int n)  ;
 void printstring(char *ss, int width) ;
 void printstringbasepos(char *ss, int w, int basepos) ;
@@ -119,9 +133,11 @@ double log2fac(int  n) ;
 double logfac(int n)  ;
 double logbino(int n, int k)  ;
 double loghprob(int n, int a, int m, int k) ;  
+int hprobv(double *vprob, int n, int a, int m) ;
 /* hypergeometric probability */
 double logmultinom(int *cc, int n) ;
 double addlog(double a, double b) ;
+double logsum(double *x, int n)  ;
 double vldot(double *x, double *y, int n) ;
 double pow10 (double x) ;
 void vpow10 (double *a, double *b, int n) ;
@@ -168,6 +184,7 @@ void iswap (int *pa, int *pb) ;
 void cswap(char *c1, char *c2) ;
 
 
+void copycol(double *x, double **a, int n, int col)  ;
 void floatit2D(double **a, int **b, int nrows, int ncols)  ; 
 void copyarr2D(double **a, double **b, int nrows, int ncols) ;  // a input b output
 void copyiarr2D(int **a, int **b, int nrows, int ncols) ;  // a input b output
@@ -198,3 +215,17 @@ int pmult(double *a, double *b, double *c, int na, int nb) ;
 void pdiff(double *a, double *b, int deg) ;
 void vswap(double *a, double *b, int n)  ;
 void setlong(long *pplen, long a, long b)   ;
+
+long lmod (long x, long base)  ;
+long gcdx(long b, long a, long *x, long *y) ; 
+long modinv(long a, long base) ;  
+long lpow2(int n) ; 
+double exp1minus(double x) ;
+
+double cputimes (int mode, int clock) ;
+double cputime (int mode) ;
+double calcmem (int mode) ;
+double vnorm(double *a, int n) ; 
+void vin(double *a, double *b, int n)  ;
+
+int visnan(double *a, int n) ; 

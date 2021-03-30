@@ -1,0 +1,4 @@
+#!/usr//bin/perl  -w 
+
+system "ploteig -i sicaa.evec -c 1:2  -g aaa  -p  test4 -x -k  -r ctable -e ell4aa.out -t \" Sicily EBA projected conf: 0.95\"" ;
+

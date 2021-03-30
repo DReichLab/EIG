@@ -1,23 +1,11 @@
-CFLAGS = -I../../include -D_GNU_SOURCE
+override CFLAGS += -c -O3   -g -p -Wimplicit -I./
 
-ifeq ($(DEBUG), 1)
-	CFLAGS += -g # enable debugging
-endif
+all: libnick.a
 
-ifeq ($(PROFILING), 1)
-	CFLAGS += -pg # enable profiling
-endif
-
-NLIB = libnick.a
-NLIBOBJS = gauss.o gds.o getpars.o linsubs.o sortit.o statsubs.o strsubs.o vsubs.o xsearch.o twtable.o
-
-.PHONY: all clean
-
-all: $(NLIB)
+libnick.a: strsubs.o sortit.o vsubs.o statsubs.o linsubs.o getpars.o xsearch.o gauss.o gds.o
+	ar -r libnick.a $^
+	ranlib libnick.a
 
 clean:
-	rm *.a *.o
-
-# ----- build nicksrc/libnick.a
-$(NLIB): $(NLIBOBJS)
-	ar -r $@ $^
+	rm -f *.o
+	rm -f libnick.a

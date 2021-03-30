@@ -25,7 +25,7 @@ eigvals (double *mat, double *evals, int n)
 
   len = n * (n + 1);
   len /= 2;
-  ZALLOC (pmat, len, double);
+  ZALLOC (pmat, 2*len, double);
 
   vst (mat, mat, -1.0, n * n);
   packsym (pmat, mat, n);
@@ -43,7 +43,7 @@ eigvecs (double *mat, double *evals, double *evecs, int n)
 
   len = n * (n + 1);
   len /= 2;
-  ZALLOC (pmat, len, double);
+  ZALLOC (pmat, 2*len, double);
 
   vst (mat, mat, -1.0, n * n);
   packsym (pmat, mat, n);
@@ -226,5 +226,31 @@ geneigsolve (double *pmat, double *qmat, double *evec, double *eval, int n)
 
   free (amat);
   free (bmat);
+
+}
+
+void
+mkorth (double *orth, double *ww, int n)
+// special purpose.  Construct basis of vectors orthogonal to ww
+{
+
+  double *vv, *evec, *qq;
+  double y;
+
+  ZALLOC (vv, n * n, double);
+  ZALLOC (evec, n * n, double);
+  ZALLOC (qq, n, double);
+
+  y = asum2 (ww, n);
+  vst (qq, ww, 1.0 / sqrt (y), n);
+  setidmat (vv, n);
+  addouter (vv, qq, n);
+
+  eigvecs (vv, orth, evec, n);
+  copyarr (evec + n, orth, n * (n - 1));
+
+  free (vv);
+  free (qq);
+  free (evec);
 
 }

@@ -206,6 +206,15 @@ ivst (int *a, int *b, int c, int n)
 }
 
 void
+ivvt (int *a, int *b, int *c, int n)
+{
+  int i;
+  for (i = 0; i < n; i++)
+    a[i] = b[i] * c[i];
+}
+
+
+void
 ivclear (int *a, int c, long n)
 {
   long i;
@@ -517,12 +526,44 @@ adddiag (double *a, double *diag, int n)
   }
 }
 
+void
+diagplus (double *b, double *a, double eps, int n)
+
+{
+  double *dd, y  ; 
+
+  ZALLOC(dd, n, double) ;
+  y = eps*trace(a, n)/(double) n ; 
+// scale invariant
+  vclear(dd, y, n) ;
+  copyarr(a, b, n*n) ; 
+  adddiag(b, dd, n) ;
+
+  free(dd) ;
+}
+
+
+void
+copyarrp (double **a, double **b, int n)
+{
+  int i;
+
+  if (a==b) return ; 
+
+  for (i = 0; i < n; i++) {
+    b[i] = a[i];
+  }
+}
+
 
 
 void
 copyarr (double *a, double *b, int n)
 {
   int i;
+
+  if (a==b) return ; 
+
   for (i = 0; i < n; i++) {
     b[i] = a[i];
   }
@@ -540,6 +581,20 @@ revarr (double *b, double *a, int n)
   copyarr (x, b, n);
   free (x);
 }
+
+void
+revlarr (long *b, long *a, int n)
+{
+  int i;
+  long *x;
+  ZALLOC (x, n, long);
+  for (i = 0; i < n; i++) {
+    x[n - i - 1] = a[i];
+  }
+  copylarr (x, b, n);
+  free (x);
+}
+
 
 void
 revuiarr (unsigned int *b, unsigned int *a, int n)
@@ -635,6 +690,24 @@ ipermute (int *a, int *ind, int len)
   }
 
   free (rrr);
+}
+
+void multperm(int *a, int *b, int *c, int len) 
+{
+ int *q, x, i ; 
+
+// first b then c  
+
+ ZALLOC(q, len, int) ;
+ for (i=0; i<len; ++i)  { 
+  x = b[i] ; 
+  q[i] = c[x] ; 
+ }
+ copyiarr(q, a, len) ; 
+
+ free(q) ; 
+
+
 }
 
 void
@@ -798,6 +871,7 @@ countcat (int *tags, int n, int *ncat, int nclass)
 
 void
 rowsum (double *a, double *rr, int n)
+// square matrix 
 {
   int i, j;
   vclear (rr, 0.0, n);
@@ -810,6 +884,7 @@ rowsum (double *a, double *rr, int n)
 
 void
 colsum (double *a, double *cc, int n)
+// square matrix 
 {
   int i, j;
   vclear (cc, 0.0, n);
@@ -895,6 +970,39 @@ printmat (double *a, int m, int n)
 }
 
 void
+printmat0 (double *a, int m, int n)
+
+/** 
+ print a matrix n wide m rows  
+*/
+{
+  printmatw0 (a, m, n, 10);
+}
+
+
+void
+printmatwxfile (double *a, int m, int n, int w, FILE *fff)
+
+/** 
+ print a matrix n wide m rows  w to a row
+ no final nl
+*/
+{
+  int i, j, jmod;
+  for (i = 0; i < m; i++) {
+    for (j = 0; j < n; j++) {
+      fprintf (fff, "%9.3f ", a[i * n + j]);
+      jmod = (j + 1) % w;
+      if ((jmod == 0) && (j < (n - 1))) {
+        fprintf (fff, "  ...\n");
+      }
+    }
+    if (i < (m - 1))
+      fprintf (fff, "\n");
+  }
+}
+
+void
 printmatwx (double *a, int m, int n, int w)
 
 /** 
@@ -937,6 +1045,48 @@ printmatw (double *a, int m, int n, int w)
 }
 
 void
+printmatw0xfile (double *a, int m, int n, int w, FILE *fff)
+
+/** 
+ print a matrix n wide m rows  w to a row
+*/
+{
+  int i, j, jmod;
+  for (i = 0; i < m; i++) {
+    for (j = 0; j < n; j++) {
+      fprintf (fff, "%6.0f ", a[i * n + j]);
+      jmod = (j + 1) % w;
+      if ((jmod == 0) && (j < (n - 1))) {
+        fprintf (fff, "  ...\n");
+      }
+    }
+    fprintf (fff, "\n");
+  }
+}
+
+
+void
+printmatw0 (double *a, int m, int n, int w)
+
+/** 
+ print a matrix n wide m rows  w to a row
+*/
+{
+  int i, j, jmod;
+  for (i = 0; i < m; i++) {
+    for (j = 0; j < n; j++) {
+      printf ("%6.0f ", a[i * n + j]);
+      jmod = (j + 1) % w;
+      if ((jmod == 0) && (j < (n - 1))) {
+        printf ("  ...\n");
+      }
+    }
+    printf ("\n");
+  }
+}
+
+
+void
 printmatl (double *a, int m, int n)
 
 /** 
@@ -945,6 +1095,67 @@ printmatl (double *a, int m, int n)
 {
   printmatwl (a, m, n, 5);
 }
+
+void
+printmatlx (double *a, int m, int n)
+
+/** 
+ print a matrix n wide m rows  
+ no final \n
+*/
+{
+  printmatwlx (a, m, n, 5);
+}
+
+void printmatlfile(double *a, int m, int n, FILE *fff) 
+{
+
+ printmatwlfile(a, m, n, n, fff) ;
+
+}
+
+void
+printmatwlxfile (double *a, int m, int n, int w, FILE *fff)
+
+/** 
+ print a matrix n wide m rows  w to a row
+ 15.9f format  No final newline 
+*/
+{
+  int i, j, jmod;
+  for (i = 0; i < m; i++) {
+    for (j = 0; j < n; j++) {
+      fprintf (fff, "%15.9f ", a[i * n + j]);
+      jmod = (j + 1) % w;
+      if ((jmod == 0) && (j < (n - 1))) {
+        fprintf (fff, "  ...\n");
+      }
+    }
+  }
+}
+
+
+void
+printmatwlfile (double *a, int m, int n, int w, FILE *fff)
+
+/** 
+ print a matrix n wide m rows  w to a row
+ 15.9f format
+*/
+{
+  int i, j, jmod;
+  for (i = 0; i < m; i++) {
+    for (j = 0; j < n; j++) {
+      fprintf (fff, "%15.9f ", a[i * n + j]);
+      jmod = (j + 1) % w;
+      if ((jmod == 0) && (j < (n - 1))) {
+        fprintf (fff, "  ...\n");
+      }
+    }
+    fprintf (fff, "\n");
+  }
+}
+
 
 void
 printmatwl (double *a, int m, int n, int w)
@@ -964,6 +1175,27 @@ printmatwl (double *a, int m, int n, int w)
       }
     }
     printf ("\n");
+  }
+}
+
+void
+printmatwlx (double *a, int m, int n, int w)
+
+/** 
+ print a matrix n wide m rows  w to a row
+ 15.9f format
+ No final \n
+*/
+{
+  int i, j, jmod;
+  for (i = 0; i < m; i++) {
+    for (j = 0; j < n; j++) {
+      printf ("%15.9f ", a[i * n + j]);
+      jmod = (j + 1) % w;
+      if ((jmod == 0) && (j < (n - 1))) {
+        printf ("  ...\n");
+      }
+    }
   }
 }
 
@@ -989,6 +1221,16 @@ printmatwf (double *a, int m, int n, int w, char *format)
       }
     }
     printf ("\n");
+  }
+}
+
+void
+printmatw2D (double **a, int m, int n, int w)
+{
+  int k;
+  for (k = 0; k < m; ++k) {
+    printf ("%3d: ", k);
+    printmatw (a[k], 1, n, w);
   }
 }
 
@@ -1061,6 +1303,27 @@ printimatw (int *a, int m, int n, int w)
   }
 }
 
+
+void
+printimatxfile (int *a, int m, int n, FILE *fff)
+
+/** 
+ print a matrix n wide m rows  
+ no final new line
+*/
+{
+  int i, j, jmod;
+  for (i = 0; i < m; i++) {
+    for (j = 0; j < n; j++) {
+      fprintf (fff, "%5d ", a[i * n + j]);
+      jmod = (j + 1) % 10;
+      if ((jmod == 0) && (j < (n - 1))) {
+        fprintf (fff, "  ...\n");
+      }
+    }
+  }
+}
+
 void
 printimatx (int *a, int m, int n)
 
@@ -1098,6 +1361,27 @@ printimat2D (int **a, int m, int n)
 
   for (k = 0; k < m; ++k) {
     printimat (a[k], 1, n);
+  }
+}
+
+
+void
+printimat1x (int *a, int m, int n)
+
+/** 
+ print a matrix n wide m rows, %1d format  
+*/
+{
+  int i, j, jmod;
+  for (i = 0; i < m; i++) {
+    for (j = 0; j < n; j++) {
+      printf ("%1d", a[i * n + j]);
+      jmod = (j + 1) % 50;
+      if ((jmod == 0) && (j < (n - 1))) {
+        printf ("  ...\n");
+      }
+    }
+    if (i < (m - 1)) printf ("\n");
   }
 }
 
@@ -1277,6 +1561,15 @@ fixit (int *a, double *b, int n)
     a[i] = nnint (b[i]);
   }
 }
+void
+fixitl (long *a, double *b, int n)
+{
+  int i;
+  for (i = 0; i < n; i++) {
+    a[i] = lrint (b[i]);
+  }
+}
+
 
 int
 findfirst (int *a, int n, int val)
@@ -1428,6 +1721,26 @@ loghprob (int n, int a, int m, int k)
 
 }
 
+int hprobv(double *vprob, int n, int a, int m)
+//  vprob[k] is hprob(n,a, m, k) ;  vprob preallocated m+1  
+{
+   int k, mp = m+1 ;
+   double y ;  
+ 
+   vclear(vprob, -1.0e40, mp) ;
+   for (k=0; k<=m; ++k)    {
+     vprob[k] = loghprob(n, a, m, k) ;
+   }
+  
+   vexp(vprob, vprob, mp) ;
+   y = bal1(vprob, mp) ;
+   if (fabs(y-1.0) > 0.01) return -1 ;
+/**
+   printf("sum:: %15.9f\n", y) ;
+   printmatl(vprob, 1, mp) ;
+*/
+   return 1 ;
+}          
 
 double
 log2fac (int n)
@@ -1442,10 +1755,29 @@ log2fac (int n)
   return (y / log (2.0));
 }
 
+double addlogv(double *a, int n) 
+// log (sum (exp(a))) 
+{ 
+
+ double y ; 
+ int i ; 
+
+ y = a[0] ; 
+ for (i=1; i<n; i++) { 
+  y = addlog(a[i], y) ;
+ }
+
+ return y ; 
+
+}
+
+
+
 double
 addlog (double a, double b)
 {
-  /* given a = log(A)
+  /** 
+     given a = log(A)
      b = log(B)
      returns log(A+B) 
      with precautions for overflow etc
@@ -1458,6 +1790,7 @@ addlog (double a, double b)
 /** 
  answer is log(1 + A/B) + log (B)  
 */
+
   z = x - y;
   if (z < -50.0)
     return y;
@@ -1467,6 +1800,69 @@ addlog (double a, double b)
 
 }
 
+double sublog (double a, double b)
+{
+  /** 
+     given a = log(A)
+     b = log(B)
+     returns log(A-B) 
+     with precautions for overflow etc
+   */
+  double  z;
+
+  if (a <= b) fatalx("(sublog) negative answer: %12.6f %12.6f\n", a, b) ;
+
+/** 
+ answer is log(1 - B/A) + log (A)  
+*/
+  // 
+  z = b - a;
+  if (z < -50.0)
+    return a;
+  z = 1.0 - exp (z); // z < 1
+  z = log (z) + a;
+  return (z);
+
+}
+
+
+double logsum(double *x, int n) 
+{
+// no test for 0
+  
+  double *w, y ; 
+  ZALLOC(w, n, double) ; 
+
+  vlog(w, x, n) ; 
+  y = asum(w, n) ;
+
+  free(w) ; 
+  return y ; 
+
+
+} 
+
+double
+vlsum (double *x, int n)
+
+/** 
+  sum(log x) 
+*/
+
+{
+  double *z, ans;
+  double tiny = 1.0e-19;
+  int i;
+
+  ZALLOC (z, n, double);
+  vsp (z, x, 1.0e-20, n);
+  vlog (z, z, n);
+
+  ans = asum(z, n) ;
+
+  free (z);
+  return ans;
+}
 
 
 double
@@ -1767,10 +2163,22 @@ subouter (double *out, double *a, int n)
 
 /* 
  subtract outerprod(a)  to out
- trival to recode to make ~ 2 * faster
+ trivial to recode to make ~ 2 * faster
 */
 {
   addoutmul (out, a, -1.0, n);
+
+}
+
+void
+addtensor (double *out, double *a, double *b, int na, int nb)
+{
+  int i, j ;
+
+ for (i=0; i<na; ++i) { 
+  for (j=0; j<nb; ++j) { 
+   out[i*nb+j] += a[i]*b[j] ;
+ }} 
 
 }
 
@@ -2052,6 +2460,15 @@ dekodeitb (int *xx, int kode, int len, int base)
 
 }
 
+void copycol(double *x, double **a, int n, int col) 
+{
+  int i ; 
+  for (i=0; i<n; ++i) { 
+   x[i] = a[i][col] ;
+  }
+
+}
+
 void
 floatit2D (double **a, int **b, int nrows, int ncols)
 {
@@ -2086,6 +2503,7 @@ copyiarr2D (int **a, int **b, int nrows, int ncols)
 }
 
 
+// be very careful about rows and columns here. 
 void
 plus2Dint (int **a, int **b, int **c, int nrows, int ncols)
 {
@@ -2236,6 +2654,7 @@ dekodeitbb (int *xx, int kode, int len, int *baselist)
 
 
 long expmod(long a, long b, long n) 
+// a^b mod n 
 { 
  int t ; 
  long ax=1, bx, z, z2 ; 
@@ -2417,6 +2836,20 @@ mkfull (double *out, double *in, int n)
   }
   return x;
 }
+void ivswap(int *a, int *b, int n) 
+{
+  int *w ; 
+
+  ZALLOC(w, n, int) ;
+
+  copyiarr(a, w, n) ; 
+  copyiarr(b, a, n) ; 
+  copyiarr(w, b, n) ;
+
+  free(w) ;
+
+}
+
 void vswap(double *a, double *b, int n) 
 {
   double *w ; 
@@ -2442,4 +2875,274 @@ void setlong(long *pplen, long a, long b)
 
 }
 
+long lmod (long x, long base) 
+// like % but handles - numbers better
+{
+  long t ; 
+
+  t = x % base ; 
+  if (t < 0) return lmod(t+base, base) ; 
+  return t ; 
+
+
+}
+
+
+void
+printlmat (long *a, int m, int n)
+
+/**
+ print a matrix n wide m rows
+*/
+{
+  int i, j, jmod;
+  for (i = 0; i < m; i++) {
+    for (j = 0; j < n; j++) {
+      printf ("%10ld ", a[i * n + j]);
+      jmod = (j + 1) % 5;
+      if ((jmod == 0) && (j < (n - 1))) {
+        printf ("  ...\n");
+      }
+    }
+    printf ("\n");
+  }
+}
+
+
+
+void
+floatitl (double *a, long *b, int n)
+{
+  int i;
+  for (i = 0; i < n; i++) {
+    a[i] = (double) b[i];
+  }
+}
+
+void
+lvsp (long *a, long *b, long c, int n)
+{
+  int i;
+  for (i = 0; i < n; i++)
+    a[i] = b[i] + c;
+}
+
+
+void
+lvvp (long *a, long *b, long *c, int n)
+{
+  int i;
+  for (i = 0; i < n; i++)
+    a[i] = b[i] + c[i];
+}
+
+void
+lvvm (long *a, long *b, long *c, int n)
+{
+  int i;
+  for (i = 0; i < n; i++)
+    a[i] = b[i] - c[i];
+}
+
+long gcdx(long a, long b, long *x, long *y)
+{
+    long t, x1, y1; // To store results of recursive call
+    if (a == 0)
+    {
+        *x = 0;
+        *y = 1;
+        return b;
+    }
+ 
+ 
+    // Update x and y using results of recursive
+    // call
+    t = gcdx(b%a, a, &x1, &y1) ;
+
+    *x = y1 - (b/a) * x1;
+    *y = x1;
+
+    return t ;
+    
+    
+ 
+}
+
+// gcd = a*x + b*y 
+
+long modinv(long a, long base) 
+{
+  long t, x, y, aa ; 
+
+  aa = lmod(a, base) ; 
+  if (aa==0) return 0 ;  // special case 
+  t = gcdx(a, base, &x, &y) ; 
+  if (t != 1) fatalx("(modinv) %ld %ld\n", a, base) ; 
+
+  return x ; 
+
+
+}
+
+long lpow2(int n) 
+{
+ long x = 1 ; 
+
+ return x << n ; 
+
+
+}
+
+double cputimes (int mode, int clock) 
+{
+  static double tt[10] ; 
+
+  if (clock >= 10) fatalx("clock out of bounds\n") ;
+
+ if (mode==0) {  
+  tt[clock] = clocktime() ;
+  return 0 ;
+ }
+
+ return clocktime() - tt[clock] ; 
+
+}
+
+
+double cputime (int mode) 
+{
+  static double ttt=0 ; 
+
+ if (mode==0) {  
+  ttt = clocktime() ;
+  return 0 ;
+ }
+
+ return clocktime() - ttt ; 
+
+}
+
+double calcmem (int mode) 
+{
+  static void *ttt = 0 ; 
+
+ if (mode==0) {  
+  ttt = topheap() ;
+  return 0 ;
+ }
+
+ return (double) (topheap()  - ttt) ; 
+
+}
+
+double exp1minus(double x) 
+// 1 - exp(-x) to good precision
+{
+ double ans, top, bot, term ; 
+ int n ; 
+
+ if (fabs(x)>.001) return 1.0 - exp(-x) ; 
+ 
+ ans = 0; top = x ; bot = 1 ; n = 1 ; 
+
+ for (;;) { 
+   term = top/bot ;
+   ans += term ; 
+   if (fabs(term) < 1.0e-20) break ; 
+   top *= -x ; 
+   ++n ; 
+   bot *= (double) n ; 
+ }
+ return ans ;
+}
+
+double vn2(double a, double b) 
+{
+ double ww[2] ; 
+
+ ww[0] = a ; 
+ ww[1] = b ; 
+
+ return vnorm(ww, 2) ;
+
+}
+
+double vnorm(double *a, int n) 
+{
+   double y ;  
+   y = asum2(a, n)/ (double) n ; 
+
+   if (y==0.0) return y ; 
+   return sqrt(y) ;
+
+} 
+
+void vin(double *a, double *b, int n) 
+// invert in unit sphere  
+{
+  double y ; 
+  y = asum2(b, n) ; 
+  if (y==0.0) fatalx("(inv) zero vectro\n") ;
+  vst(a, b, 1.0/y, n) ;
+}
+
+int visnan(double *a, int n)  
+{ 
+ int k, ret ; 
+
+ for (k=0; k<n; ++k) { 
+  if (isnan(a[k])) return YES ;
+ }
+
+ return NO ;
+
+}
+
+int
+numintmatch (int *a, int len, int val)
+{
+  int k, t = 0;
+
+  for (k = 0; k < len; ++k) {
+    if (a[k] == val)
+      ++t;
+  }
+  return t;
+
+}
+
+
+
+int 
+findlastgt(int *a, int n, int val) 
+// should scan backwards really
+{
+
+ int k, last ; 
+ int x  ; 
+
+ last = n ; 
+ for (k=0; k<n; ++k) { 
+  x = a[k] - val ; 
+  if (x>0) last = k ; 
+ }
+ return last ;
+}
+
+
+int 
+findflastgt(double *a, int n, double val) 
+// should scan backwards really
+{
+
+ int k, last ; 
+ double y ; 
+
+ last = n ; 
+ for (k=0; k<n; ++k) { 
+  y = a[k] - val ; 
+  if (y>1.0e-6) last = k ; 
+ }
+ return last ;
+}
 

@@ -22,6 +22,7 @@ bal (double *a, double *b, int n)
 
 /** 
  normalize mean 0 s.d 1 
+ no error checking 
 */
 {
   double t;
@@ -32,6 +33,38 @@ bal (double *a, double *b, int n)
   vst (a, a, 1.0 / sqrt (t), n);
 }
 
+
+void xmultx(double *a, double *b, int m, int n) 
+{
+ // M x M' : a is m x m 
+ double *tb ; 
+
+ ZALLOC(tb, m*n, double) ; 
+ 
+ transpose(tb, b, m, n) ;  
+ mulmat(a, b, tb, m, n, m) ; 
+ 
+
+ free(tb) ;
+
+
+}
+void txmulx(double *a, double *b, int m, int n) 
+{
+ // M' x M : a is n x n 
+ double *tb ; 
+
+ ZALLOC(tb, m*n, double) ; 
+ 
+ transpose(tb, b, m, n) ;  
+ mulmat(a, tb, b, n, m, n) ; 
+ 
+
+ free(tb) ;
+
+
+
+}
 void
 mulmat (double *a, double *b, double *c, int a1, int a2, int a3)
 
@@ -271,6 +304,8 @@ solvit (double *prod, double *rhs, int n, double *ans)
   int i;
   int ret;
 
+  ret = visnan(prod, n*n) ; if (ret==YES) return -4 ; 
+  ret = visnan(rhs, n) ; if (ret==YES) return -3 ; 
 
   ZALLOC (ttt, n * n, double);
   ZALLOC (p, n, double);
@@ -354,6 +389,32 @@ choldc (double *a, int n, double *p)
   }
 
   return 1;
+
+}
+int isposdef (double *a, int n) 
+{
+  double *aa, *p ; 
+  int ret, k ; 
+ 
+/** 
+ quick check on diagonal
+*/  
+  for (k=0; k<n; ++k) { 
+   if (a[k*n+k] <= 0.0) return NO ;
+  }
+
+  ZALLOC(aa, n*n, double) ; 
+  ZALLOC(p, n, double) ; 
+
+  copyarr(a, aa, n*n) ;
+  ret = choldc(aa, n, p) ;
+
+
+ free(aa) ; 
+ free(p) ;
+
+ if (ret>0) return YES ; 
+ return NO ; 
 
 }
 

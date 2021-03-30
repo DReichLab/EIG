@@ -16,7 +16,7 @@
 #include "kjg_gsl.h"
 
 #include "admutils.h"
-#include "gval.h"
+#include "../gval.h"
 
 size_t KJG_FPCA_ROWS = 256;
 

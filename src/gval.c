@@ -21,7 +21,11 @@ static int xnrows, xncols;
 static int xnumindivs;
 static int *xxindex = NULL;
 static double *xmean, *xfancy;
-static double **gtable;
+static double **gtable = NULL;
+
+int getcolxz (double *xcol, SNP * cupt, int *xindex, int *xtypes,
+              int nrows, int col, double *xmean, double *xfancy, int *n0,
+              int *n1);
 
 void
 setgval (SNP ** xsnps, int nrows, Indiv ** indivmarkers, int numindivs,
@@ -121,6 +125,7 @@ getggval (int indindx, int col, double *val)
   int t, z;
   double y, mean;
 
+  if (gtable == NULL) fatalx("(gval) bug\n") ; 
   *val = 0;
   if (xindivmarkers[indindx]->ignore)
     return -1;

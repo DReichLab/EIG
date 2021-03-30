@@ -71,6 +71,8 @@ double fstcoly (double *estn, double *estd, SNP * cupt,
 double fstx (SNP ** xsnplist, int *xindex, int *xtypes,
 	     int nrows, int ncols, int type1, int type2, double *psd);
 
+void setfstsnpout(int val) ; 
+
 void
 setplimit (Indiv ** indivmarkers, int numindivs,
 	   char **eglist, int numeg, int plimit);
@@ -138,7 +140,7 @@ double doinbreed (double *inb, double *inbest, double *inbsig,
 		  int ncols, int numeg, int nblocks, Indiv ** indivmarkers);
 
 double
-dofstnumx (double *fst, double *fstnum, double *fstsig, SNP ** xsnplist,
+dofstnumx (double *fst, double *fstans, double *fstsig, int *fstnum, SNP ** xsnplist,
 	   int *xindex, int *xtypes, int nrows, int ncols, int numeg,
 	   int nblocks, Indiv ** indm, int fstmode);
 

@@ -1,3 +1,5 @@
+#include <fcntl.h>
+#include <ctype.h>
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
@@ -12,7 +14,7 @@
 
 
 #define MAXSTR 10000
-#define MAXFF 50
+#define MAXFF  500 
 
 #include "strsubs.h"
 #include "vsubs.h"
@@ -174,6 +176,39 @@ fwhite (char *ss)
 
 static char Estr[MAXSTR];
 
+
+void
+ffprint (FILE *fff, char *fmt, ...)
+
+{
+  va_list args;
+
+  if (fff==NULL) return ; 
+
+  va_start (args, fmt);
+  vsprintf (Estr, fmt, args);
+  va_end (args);
+
+  fprintf (fff, "%s", Estr);
+  fflush (fff);
+
+}
+
+void enuf (char *fmt, ...) 
+{
+  va_list args;
+
+  va_start (args, fmt);
+  vsprintf (Estr, fmt, args);
+  va_end (args);
+  fflush (stdout);
+
+  fprintf (stderr, "enough!\n%s\n", Estr);
+  fflush (stderr);
+  exit(0) ;
+}
+
+
 void
 fatalx (char *fmt, ...)
 {
@@ -187,6 +222,20 @@ fatalx (char *fmt, ...)
   fprintf (stderr, "fatalx:\n%s", Estr);
   fflush (stderr);
   abort ();
+}
+
+
+int
+docommand (char *fmt, ...)
+{
+  va_list args;
+
+  va_start (args, fmt);
+  vsprintf (Estr, fmt, args);
+  va_end (args);
+  fflush (stdout);
+
+  return system(Estr)  ;  
 }
 
 int
@@ -421,6 +470,28 @@ printnl ()
 }
 
 void
+striplead (char *sss, char c)
+
+/** 
+ strip out lead characters 
+ c will usually be ' '
+*/
+{
+  char *sx ;
+  sx = strdup(sss) ; 
+  
+  int len, i;
+  len = strlen (sss);
+  for (i = 0 ; i <len ; ++i) {
+    if (sss[i] != c) break ; 
+    ++sx ;  
+  }
+  strcpy(sss, sx) ; 
+  freestring(&sx) ;
+}
+
+
+void
 striptrail (char *sss, char c)
 
 /** 
@@ -575,11 +646,50 @@ substring (char **ap, char *inx, char *outx)
   return (substringx (ap, inx, outx, 0));
 }
 
+int mapstrings(char **pstr, char **insub, char **outsub, int n)  
+{
+  char *ss ;  
+  int k, t = 0 ; 
+  ss = strdup(*pstr) ;
+  
+  for (k=0; k<n; ++k) {  
+    t += substring(&ss, insub[k], outsub[k]) ; 
+  }
 
+  *pstr = strdup(ss) ; 
+  freestring(&ss) ;
+  return t ; 
+
+}
+  
+
+
+int upstring (char *ss)
+
+/* 
+ YES if at least one upper case character 
+ and no lower case  
+*/
+{
+  int nupper = 0;
+  int i;
+  for (i = 0; i < strlen (ss); i++)
+  {
+    if (islower (ss[i]))
+      return NO;
+    if (isupper (ss[i]))
+      ++nupper;
+  }
+  if (nupper > 0)
+    return YES;
+  return NO;
+
+}
 
 int
 numcols (char *name)
 // number of cols 
+#define MAXCOLS 1000 
 {
   FILE *fff;
   char line[MAXSTR];
@@ -588,10 +698,10 @@ numcols (char *name)
   int nsplit, num = 0;
 
   if (name == NULL)
-    fatalx ("(numlines)  no name");
+    fatalx ("(numlines)  no name\n");
   openit (name, &fff, "r");
   while (fgets (line, MAXSTR, fff) != NULL) {
-    nsplit = splitup (line, spt, MAXFF);
+    nsplit = splitup (line, spt, MAXCOLS);
     if (nsplit == 0)
       continue;
     sx = spt[0];
@@ -650,6 +760,25 @@ ftest (char *sss)
   return YES;
 }
 
+
+int
+openit_trap (char *name, FILE ** fff, char *type)
+{
+  char *ss;
+  if (name == NULL)
+    fatalx ("\n(openit_trap) null name\n");
+  *fff = fopen (name, type);
+  if (*fff == NULL) {
+    ss = strerror (errno);
+    printf ("bad open %s\n", name);
+    printf("(openit) can't open file %s of type %s\n error info: %s\n", name, type,
+            ss);
+    return NO ;
+  }
+  return YES ;
+  
+}
+
 void
 openit (char *name, FILE ** fff, char *type)
 {
@@ -661,10 +790,32 @@ openit (char *name, FILE ** fff, char *type)
     ss = strerror (errno);
     printf ("bad open %s\n", name);
 // system("lsof | fgrep np29") ;
-    fatalx ("can't open file %s of type %s\n error info: %s\n", name, type,
+    fatalx ("(openit) can't open file %s of type %s\n error info: %s\n", name, type,
             ss);
   }
 }
+
+void fcheckr(char *name)
+// like ftest but just calls fatalx on error
+{
+ FILE *fff ;
+
+ openit(name, &fff,  "r") ;
+ fclose(fff) ;
+
+
+}
+
+void fcheckw(char *name)
+{
+ FILE *fff ;
+
+ openit(name, &fff,  "w") ;
+ fclose(fff) ;
+
+
+}
+
 
 int
 getxx (double **xx, int maxrow, int numcol, char *fname)
@@ -882,7 +1033,7 @@ getnames (char ****pnames, int maxrow, int numcol, char *fname)
   char *sx;
   int nsplit, i, j, num = 0, maxff, numcolp;
   FILE *fff;
-  int nbad = 0;
+  int nbad = 0 ;
   char ***names;
 
   names = *pnames;
@@ -907,10 +1058,7 @@ getnames (char ****pnames, int maxrow, int numcol, char *fname)
     }
     if (nsplit < numcol) {
       ++nbad;
-      if (nbad < 10)
-        printf ("+++ bad line: nsplit: %d numcol: %d\n%s\n", nsplit, numcol,
-                line);
-      continue;
+      fatalx ("+++ bad line: nsplit: %d numcol: %d\n%s\n", nsplit, numcol, line);
     }
     if (num >= maxrow)
       fatalx ("too much data\n");
@@ -929,8 +1077,9 @@ int
 getxxnames (char ***pnames, double **xx, int maxrow, int numcol, char *fname)
 {
 
-  char line[MAXSTR];
-  char *spt[MAXFF];
+  char line[MAXSTR+1];
+  char sstt[MAXSTR+1] ;  
+  char **spt ;
   char *sx;
   int nsplit, i, j, num = 0, maxff, numcolp;
   FILE *fff;
@@ -946,8 +1095,12 @@ getxxnames (char ***pnames, double **xx, int maxrow, int numcol, char *fname)
   }
   numcolp = numcol + 1;
   maxff = MAX (MAXFF, numcolp);
+  ZALLOC (spt, maxff, char *) ;
 
+  line[MAXSTR] = sstt[MAXSTR] = CNULL ;
+  num = 0 ;
   while (fgets (line, MAXSTR, fff) != NULL) {
+//  printf("zz %d ::%s\n", num, line) ; 
     nsplit = splitup (line, spt, maxff);
     if (nsplit == 0) {
       freeup (spt, nsplit);
@@ -965,12 +1118,16 @@ getxxnames (char ***pnames, double **xx, int maxrow, int numcol, char *fname)
       if (nbad < 10)
         printf ("+++ bad line: nsplit: %d numcol: %d\n%s\n", nsplit, numcol,
                 line);
+      fatalx("quitting\n") ;
       continue;
     }
     if (num >= maxrow)
       fatalx ("too much data\n");
     for (i = 0; i < numcol; i++) {
-      xx[i][num] = atof (spt[i + 1]);
+// NA -> 0 
+      strncpy(sstt, spt[i+1], MAXSTR) ; 
+      if (strcmp(sstt, "NA") == 0) strcpy(sstt, "0") ;
+      xx[i][num] = atof (sstt) ;      
     }
     freeup (spt, nsplit);
     ++num;
@@ -988,14 +1145,14 @@ like getxxnames but file already open
 */
 {
 
-#define MAXFF  50
 
   char line[MAXSTR];
+  char sstt[MAXSTR] ; 
   char *spt[MAXFF];
   char *sx;
   int nsplit, i, j, num = 0, maxff, numcolp;
   int nbad = 0;
-  char **names;
+  char **names = NULL;
 
   if (pnames != NULL)
     names = *pnames;
@@ -1026,7 +1183,9 @@ like getxxnames but file already open
     if (num >= maxrow)
       fatalx ("too much data\n");
     for (i = 0; i < numcol; i++) {
-      xx[i][num] = atof (spt[i + 1]);
+      strcpy(sstt, spt[i+1]) ; 
+      if (strcmp(sstt, "NA") == 0) strcpy(sstt, "0") ;
+      xx[i][num] = atof (sstt) ;      
     }
     freeup (spt, nsplit);
     ++num;
@@ -1348,6 +1507,20 @@ printstringsw (char **ss, int n, int slen, int width)
 }
 
 void
+printstringsx (char **ss, int n)
+// no newline
+{
+  int k;
+
+  for (k = 0; k < n; ++k) {
+    if (ss[k] != NULL)
+      printf (" %s", ss[k]);
+    else
+      printf (" %s", "NULL");
+  }
+}
+ 
+void
 printstrings (char **ss, int n)
 {
   int k;
@@ -1360,7 +1533,7 @@ printstrings (char **ss, int n)
     printnl ();
   }
 }
-
+ 
 int
 ridfile (char *fname)
 {
@@ -1734,6 +1907,7 @@ findupper (char *s)
 char *
 strnotchar (char *s, char c)
 // CNULL not tested
+// return pointer to first char NOT c 
 {
   char x;
   int len, k;
@@ -1807,4 +1981,215 @@ int filehash(char *name)
   fclose (fff);
   return abs(hash) ;
 }
+
+char *mytemp (char *qqq) 
+// make temporary file name.   qqq is header string, eg "junk1" 
+{
+  char ss[MAXSTR] ; 
+  int t ; 
+
+  t = (int) getpid() ; 
+  sprintf(ss, "/tmp/%s.%d", qqq, t) ; 
+  return strdup(ss) ;
+}
+
+void printslurmenv () 
+{
+ char *ss ; 
+ char sss[256] ;  
+
+ ss = getenv("SLURM_JOBID") ; 
+ if (ss==NULL) return ; 
+ sprintf(sss, "sstat -j %s --format=jobid,avecpu,averss", ss) ;  
+ fflush(stdout) ;
+ printf("\n") ; 
+ printf("====================================================================================\n") ;
+ system(sss) ; 
+ printf("\n") ; 
+ fflush(stdout) ;
+
+}
+
+int getfline(char *ss, char *fname, int maxstr)
+{
+  FILE *fff ;
+  int n ;
+  char *pt ;
+  openit(fname, &fff, "r") ;
+
+  pt = fgets(ss, maxstr, fff) ;
+
+  fclose(fff) ;
+  if (pt == NULL) ss[0] = CNULL ;
+  else {
+   n = strlen(ss) ;
+   ss[n-1] = CNULL ;
+  }
+  return strlen(ss) ;
+
+}
+
+int
+numcolsq (char *name)
+// number of cols : and , stripped 
+#define MAXCOLS 1000 
+{
+  FILE *fff;
+  char line[MAXSTR];
+  char *spt[MAXSTR];
+  char *sx;
+  int nsplit, num = 0;
+
+  if (name == NULL)
+    fatalx ("(numlines)  no name");
+  openit (name, &fff, "r");
+  while (fgets (line, MAXSTR, fff) != NULL) {
+    subcolon(line) ;
+    nsplit = splitup (line, spt, MAXCOLS);
+    if (nsplit == 0)
+      continue;
+    sx = spt[0];
+    if (sx[0] == '#') {
+      freeup (spt, nsplit);
+      continue;
+    }
+    freeup (spt, nsplit);
+    fclose (fff);
+    return nsplit;
+  }
+  return -1 ;
+}
+
+int
+getxxq (double **xx, int maxrow, int numcol, char *fname)
+// : and , stripped
+{
+
+  char line[MAXSTR];
+  char *spt[MAXFF];
+  char *sx;
+  int nsplit, i, j, num = 0, maxff;
+  FILE *fff;
+  int nbad = 0;
+
+  if (fname == NULL)
+    fff = stdin;
+  else {
+    openit (fname, &fff, "r");
+  }
+  maxff = MAX (MAXFF, numcol);
+
+  while (fgets (line, MAXSTR, fff) != NULL) {
+    subcolon(line) ;
+    nsplit = splitup (line, spt, maxff);
+    if (nsplit == 0) {
+      freeup (spt, nsplit);
+      continue;
+    }
+    sx = spt[0];
+    if (sx[0] == '#') {
+      freeup (spt, nsplit);
+      continue;
+    }
+    if (nsplit < numcol) {
+      ++nbad;
+      if (nbad < 10)
+        printf ("+++ bad line: nsplit: %d numcol: %d\n%s\n", nsplit, numcol,
+                line);
+      continue;
+    }
+    if (num >= maxrow)
+      fatalx ("too much data\n");
+    for (i = 0; i < numcol; i++) {
+      xx[i][num] = atof (spt[i]);
+    }
+    freeup (spt, nsplit);
+    ++num;
+  }
+  if (fname != NULL)
+    fclose (fff);
+  return num;
+}
+
+
+int copyfs(char *infile, FILE *fff) 
+// copy file  to stream
+{
+  char line[MAXSTR];
+  int num = 0;
+  FILE *ggg ; 
+
+  openit(infile, &ggg, "r") ;
+  while (fgets (line, MAXSTR, ggg) != NULL) {
+    fprintf(fff, "%s", line) ; 
+    ++num ; 
+  }
+
+  fclose(ggg) ;
+  return num ;
+}
+
+int putdata(char *buff, int nbytes, char *fname) 
+{
+  int fdes, t, ret ;
+
+  if (fname == NULL) return 0 ;
+
+  ridfile(fname) ;
+
+  fdes = open(fname, O_CREAT | O_TRUNC | O_RDWR, 0666);
+  if (fdes<0) {
+    perror(" open failure") ;
+    fatalx("(putdata) bad open %s\n", fname) ;
+  }
+
+  t = write(fdes, buff, nbytes ) ;
+  if (t<0) {
+    perror("write failure") ;
+    fatalx("(putdata) bad write") ;
+  }
+  close(fdes) ;
+  return t ; 
+
+}
+
+int getdata(char *buff, int nbytes, char *fname) 
+{
+  int fdes, t, ret ;
+
+  if (fname == NULL) return 0 ;
+  fdes = open(fname, O_RDONLY) ;
+  if (fdes<0) {
+    perror(" open failure") ;
+    fatalx("(getdata) bad open %s\n", fname) ;
+  }
+  t = read(fdes, buff, nbytes ) ;
+  if (t<0) {
+    perror("read failure") ;
+    fatalx("(getdata) bad read") ;
+  }
+  close(fdes) ;
+  return t ; 
+
+}
+
+void writestrings(char *fname, char **ss, int n) 
+{
+ FILE *fff ; 
+ int i ; 
+
+ openit(fname, &fff, "w") ; 
+ for (i=0; i<n; ++i) { 
+  fprintf(fff, "%s\n", ss[i]) ; 
+ }
+
+ fclose(fff) ; 
+
+}
+
+
+
+
+
+
 
