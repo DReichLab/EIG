@@ -1,4 +1,4 @@
-override CFLAGS += -c -O3   -g -p -Wimplicit -I./
+override CFLAGS += -c -O3   -g -p -Wimplicit -I./ -I../../include
 
 all: libnick.a
 
