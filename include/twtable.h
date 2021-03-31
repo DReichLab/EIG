@@ -117,6 +117,7 @@ const int TWTABSIZE = 161;
 
 #endif	/* INCLUDE_TWTABLE_H_ */
 
+// g qlo qmed qhi qrat qrat/tau   :q
 const double MPTABLE[] = 
 {
 0.00,  1,  1,  1,  1,  1.615891,  

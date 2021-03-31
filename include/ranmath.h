@@ -27,6 +27,7 @@ int randis(double *a, int n) ;  // element from discrete distribution a
 void ransamp(int *samp, int nsamp, double *p, int plen) ; // sample nsamp samples from p
 void pick2(int n, int *k1, int *k2) ;  // pick 2 elements from 0..n-1
 int ranmod(int n)  ;  // random mod n 
+int iranpick(int lo, int hi) ;  // random int in [lo, hi] 
 double ranbeta(double a, double b) ;  //  beta 
 int ranbinom(int n, double p) ;   // binomial  
 void setrand(double *vv, int n) ;  // filll vv with U[0,1]
@@ -45,6 +46,7 @@ double rant(double df) ;  // t distribution
 double samppow(double e, double a, double b) ;
 double rejnorm(double lo, double hi) ;       // usually call ranboundnorm 
 double ranboundnorm(double lo, double hi) ;  // sample standard normal in [lo, hi] 
+double rtrunc2(double T) ;  // sample standard normal > T Rayleigh rejection         
 double rantruncnorm(double T, int upper) ;  // sample standard normal > T (upper =1) < T (upper = 0) 
 int ranhprob(int n, int a, int m) ;    // n balls a block sample m .  Fow many black
 double rangeom (double theta) ;  // Geometric distribution, mean 1/theta
