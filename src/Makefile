@@ -35,8 +35,7 @@ NLIB = $(ND)/libnick.a
 
 EXE = baseprog convertf mergeit pca \
 	$(ED)/pcatoy $(ED)/smartrel $(ED)/smarteigenstrat \
-	$(ED)/twstats $(ED)/eigenstrat $(ED)/eigenstratQTL $(ED)/smartpca \
-	smartpca 
+	$(ED)/twstats $(ED)/eigenstrat $(ED)/eigenstratQTL $(ED)/smartpca
 
 all:    $(EXE)
 
@@ -77,6 +76,3 @@ $(ED)/smartpca:	$(ED)/smartpca.o $(ED)/eigsubs.o $(ED)/exclude.o $(ED)/smartsubs
 		$(NLIB) \
           	$(KD)/kjg_fpca.o $(KD)/kjg_gsl.o 
           	#-lpthread
-
-smartpca:   $(ED)/smartpca
-	cp $(ED)/smartpca smartpca
