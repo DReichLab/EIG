@@ -1,6 +1,7 @@
-#!/usr/local/bin/perl  -w 
+#!/usr/bin/env perl 
 
 ### ploteig -i eigfile -p pops -c a:b [-t title] [-s stem] [-g gstem] [-o outfile] [-x] [-k]  [-y] [-z sep] -r colorstring -m xmul -n ymul 
+use warnings ;
 use Getopt::Std ;
 use File::Basename ;
 
@@ -41,8 +42,7 @@ if (defined $opts{"i"}) {
  $infile = $opts{"i"} ;
 }
 else {
- usage() ;
- exit 0 ;
+ usage("OOPS -i parameter compulsory");
 }
 
 open (FF, $infile) || die "can't open $infile\n" ;
@@ -63,7 +63,7 @@ if (defined $opts{"p"}) {
  $pops = $opts{"p"} ;
 }
 else {
- die "p parameter compulsory\n" ;
+ usage("OOPS -p parameter compulsory");
 }
 
 $popsname = setpops ($pops) ;
@@ -142,7 +142,7 @@ $psfile = "$stem.ps" ;
   $psfile  =~ s/xtxt/ps/ ;
  }
 system "gnuplot < $gnfile > $psfile" ;
-system "/home/np29/bin/fixgreen  $psfile" ;
+#system "/home/np29/bin/fixgreen  $psfile" ;
 system "ps2pdf  $psfile " ;
 }
 unlink (@T) unless $keepflag ;
@@ -172,25 +172,38 @@ sub setcolor {
 }
 
 sub usage { 
- 
-print "ploteig -i eigfile -p pops -c a:b [-t title] [-s stem] [-o outfile] [-x] [-k] -c colorstringh [-m xmul] [-n ymul]\n" ;  
-print "-i eigfile     input file first col indiv-id last col population\n" ;
-print "## as output by smartpca in outputvecs \n" ;
-print "-c a:b         a, b columns to plot.  1:2 would be common and leading 2 eigenvectors\n" ;
-print "-p pops        Populations to plot.  : delimited.   eg  -p Bantu:San:French\n" ;
-print "## pops can also be a filename.  List populations 1 per line\n" ;
-print "[-s stem]      stem will start various output files\n"  ;
-print "[-o ofile]     ofile will be gnuplot control file.  Should have xtxt suffix\n"; 
-print "[-x]           make ps and pdf files\n" ; 
-print "[-k]           keep various intermediate files although  -x set\n" ;
-print "## necessary if .xtxt file is to be hand edited\n" ;
-print "[-r colorstringpairs or colorstringfile]\n" ;
-print "[-g gstem]     make gstem.xtxt gstem.ps  gstem.pdf  \n" ;
-print "[-y]           put key at top right inside box (old mode)\n" ;
-print "[-t]           title (legend)\n" ;
+    my $message = "@_";
 
-print "The xtxt file is a gnuplot file and can be easily hand edited.  Intermediate files
-needed if you want to make your own plot\n" ;
+#       10       20       30       40       50       60       70       80       90
+#---+----|---+----|---+----|---+----|---+----|---+----|---+----|---+----|---+----|
+    die "
+Usage: ploteig [FLAGS]
+
+Required Flags:
+  -i eigfile   : input file first col indiv-id last col population
+                 as output by smartpca in outputvecs
+  -p pops      : Populations to plot.  : delimited.   eg  -p Bantu:San:French
+                 pops can also be a filename.  List populations 1 per line
+
+Optional Flags:
+  -c a:b       : a, b columns to plot.  1:2 would be common and leading 2 
+                 eigenvectors
+  -s stem      : stem will start various output files
+  -o ofile     : ofile will be gnuplot control file.  Should have xtxt suffix
+  -x           : make ps and pdf files
+  -k           : keep various intermediate files, although setting -x is
+                 necessary if .xtxt file is to be hand edited
+  -r cfile     : colorstringpairs or colorstringfile
+  -g gstem     : make gstem.xtxt gstem.ps gstem.pdf
+  -y           : put key at top right inside box (old mode)
+  -t           : title (legend)
+
+The xtxt file is a gnuplot file and can be easily hand edited. Intermediate
+files needed if you want to make your own plot
+
+$message
+
+" ;
 
 }
 sub setpops {      

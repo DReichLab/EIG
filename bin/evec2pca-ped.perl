@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 
 ### translate .evec file to .pca file expected by eigenstrat program
 ### Note: .evec file does not contain entries for outliers
@@ -9,6 +9,26 @@
 # ----- of the .fam file, but the first of a .ind file.  (2) If the 
 # ----- indiv names are not found in the .evec file, try the 
 # ----- familyname:indivname combination.  
+
+sub usage {
+    my $message = "@_";
+    die "
+Usage: evec2pca-ped.perl k example.evec example.ind example.pca
+
+Required Arguments:
+  k            : the number of principal components in example.evec
+                 file (e.g. 10)
+  example.evec : file of principal components produced by smartpca
+  example.ind  : individual file
+  example.pca  : file of principal components in file needed by
+                 eigenstrat
+
+$message
+
+"
+}
+
+unless (@ARGV == 4) {usage("OOPS unexpected number of arguments")}
 
 $k = $ARGV[0];
 $evec = $ARGV[1]; 

@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 
 $ENV{'PATH'} = "../bin:$ENV{'PATH'}";
 

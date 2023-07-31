@@ -1,7 +1,8 @@
-#!/usr//bin/perl  -w 
+#!/usr/bin/env perl
 
 ## rescale -i infile -o outfile -a inscale -b outscale 
 
+use warnings ;
 use Getopt::Std ;
 use File::Basename ;
 
@@ -82,9 +83,6 @@ sub critchi {
 
 }
 
-sub usage { 
- 
-print "rescale_ell -i infile -o outfile -s outscale [-a inscale]\n"  ; 
-exit 0 ; 
-
+sub usage {
+    die "Usage: rescale_ell -i infile -o outfile -s outscale [-a inscale]\n"  ; 
 }

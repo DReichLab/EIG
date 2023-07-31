@@ -1,11 +1,37 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
+
+sub usage {
+    my $message = "@_";
+    die "
+Usage: gc.perl infile outfile
+
+Required Arguments:
+  infile  : input file of chisq statistics produced by eigenstrat
+            program. It contains both uncorrected and EIGENSTRAT 
+            statistics for each SNP.
+  outfile : output file. It lists lambda inflation values (for 
+            both uncorrected and EIGENSTRAT) chisq statistics 
+            after scaling by lambda (uncorrected and EIGENSTRAT)
+
+Computation of lambda is as described in Devlin and Roeder 1999.
+A lambda above 1 indicates inflation in chisq statistics.
+By definition, lambda is not allowed to be less than 1.
+
+Running time of the gc.perl program is very fast.
+    
+$message
+
+"
+}
+
+unless(@ARGV == 2) {usage("OOPS unexpected number of arguments")}
 
 $P = $ARGV[0];
 $out = $ARGV[1];
 
 # get data
 $m=0;
-open(P,"$P") || die("COF");
+open(P,"$P") || die("Cannot open file: $P");
 while($line = <P>) { if($line =~ /Chisq/) { last; } } # header lines
 while($line = <P>)
 {
@@ -66,7 +92,7 @@ $lambda2 = $CHISQTHRESH/0.456; # 0.456 is median if no inflation
 if($lambda2 < 1) { $lambda2 = 1; } # not allowed to be less than 1
 
 # output
-open(OUT,">$out") || die("COF");
+open(OUT,">$out") || die("Cannot open file: $out");
 print OUT ("Chisq EIGENSTRAT\n");
 printf OUT ("lambda=%.03f lambda=%.03f\n",$lambda1,$lambda2);
 for($m=0; $m<$nSNP; $m++)

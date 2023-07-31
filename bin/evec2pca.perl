@@ -1,8 +1,28 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 
 ### translate .evec file to .pca file expected by eigenstrat program
 ### Note: .evec file does not contain entries for outliers
 ###       .pca  file does contain entries (set to all 0.0) for outliers
+
+sub usage {
+    my $message = "@_";
+    die "
+Usage: evec2pca.perl k example.evec example.ind example.pca
+
+Required Arguments:
+  k            : the number of principal components in example.evec 
+                 file (e.g. 10)
+  example.evec : file of principal components produced by smartpca
+  example.ind  : individual file
+  example.pca  : file of principal components in file needed by 
+                 eigenstrat
+
+$message
+
+"
+}
+
+unless (@ARGV == 4) {usage("OOPS unexpected number of arguments")}
 
 $k = $ARGV[0];
 $evec = $ARGV[1]; 

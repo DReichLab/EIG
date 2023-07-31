@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 
 $ENV{'PATH'} = "../bin:$ENV{'PATH'}"; 
 # MUST put pca bin directory in path for smartpca.perl to work

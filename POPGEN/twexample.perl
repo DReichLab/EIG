@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 
 $command = "../bin/twstats";
 $command .= " -t twtable ";
