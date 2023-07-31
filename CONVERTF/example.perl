@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 
 # $parfile = "par.ANCESTRYMAP.EIGENSTRAT";
   $parfile = "par.EIGENSTRAT.PED"; 

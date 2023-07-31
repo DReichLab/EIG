@@ -1,10 +1,26 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
+
+sub usage {
+    my $message = "@_";
+    die "
+Usage: ind2pheno.perl infile outfile
+
+Required Arguments:
+  infile  : input .ind file
+  outfile : output .pheno file
+
+$message
+
+";
+}
+
+unless (@ARGV == 2) {usage("OOPS unexpected number of arguments")}
 
 $in = $ARGV[0]; # .ind file
 $out = $ARGV[1]; # .pheno file
 
-open(IN,$in) || die("COF");
-open(OUT,">$out") || die("COF");
+open(IN,$in) || die("Cannot open file: $in");
+open(OUT,">$out") || die("Cannot open file: $out");
 
 while($line = <IN>)
 {

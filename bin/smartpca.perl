@@ -1,8 +1,68 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 
 use Getopt::Std ;
 use File::Basename ;
 
+sub usage {
+    my $message = "@_";
+#       10       20       30       40       50       60       70       80       90
+#---+----|---+----|---+----|---+----|---+----|---+----|---+----|---+----|---+----|
+    die "
+Usage: smartpca.perl [FLAGS]
+
+This program calls the smartpca program (see POPGEN/README). 
+For this to work, the bin directory containing smartpca MUST be in your path. 
+
+Required Flags:
+  -i example.geno  : genotype file in any format (see CONVERTF/README)
+  -a example.snp   : snp file in any format (see CONVERTF/README)
+  -b example.ind   : indiv file in any format (see CONVERTF/README)
+  -k k             : (Default is 10) number of principal components to output
+  -o example.pca   : output file of principal components.  Individuals removed
+                     as outliers will have all values set to 0.0 in this file.
+  -p example.plot  : prefix of output plot files of top 2 principal components.
+                     (labeling individuals according to labels in indiv file)
+  -e example.eval  : output file of all eigenvalues
+  -l example.log   : output logfile
+  -m maxiter       : (Default is 5) maximum number of outlier removal iterations.
+                     To turn off outlier removal, set -m 0.
+  -t topk          : (Default is 10) number of principal components along which 
+                     to remove outliers during each outlier removal iteration.
+  -s sigma         : (Default is 6.0) number of standard deviations which an
+                     individual must exceed, along one of topk top principal
+                     components, in order to be removed as an outlier.
+
+Optional Flags:
+  -w poplist       : compute eigenvectors using populations in poplist only,
+                     where poplist is an ASCII file with one population per line
+  -y plotlist      : output plot will include populations in plotlist only, 
+                     where plotlist is an ASCII file with one population per line
+  -z badsnpname    : list of SNPs which should be excluded from the analysis
+  -q YES/NO        : If set to YES, assume that there is a single population and
+                     the population field contains real-valued phenotypes.
+                     (Corresponds to qtmode parameter in smartpca program.)
+                     The default value for this parameter is NO.
+
+Estimated running time of the smartpca program is 
+  2.5e-12 * nSNP * NSAMPLES^2 hours            if not removing outliers.
+  2.5e-12 * nSNP * NSAMPLES^2 hours * (1+m)    if m outlier removal iterations.
+Thus, under the default of up to 5 outlier removal iterations, running time is 
+  up to 1.5e-11 * nSNP * NSAMPLES^2 hours.
+
+Recommendation: we advise after running pca to check for large correlations
+between each principal component and all variables of interest.  For example,
+large correlations with % missing data (per sample) could imply assay issues
+large correlations with plate membership could imply assay issues
+large correlations with phenotype indicate highly mismatched cases vs. controls
+  which will lead to a loss of power upon applying eigenstrat correction.
+  If input indiv file contains Case and Control labels only, then
+  correlations between each principal component and Case/Control status will be
+  listed at end of output logfile (-l flag).
+
+$message
+
+"
+}
 ### process flags
 # -w poplist is compute eigenvectors using populations in poplist, then project
 # -y poplistplot is use populations in poplistplot for plot
@@ -18,7 +78,7 @@ for($n=0; $n<$x; $n++)
 }
 foreach $flag ("i","a","b","o","p","e","l")
 {
-  unless($specified{$flag}) { die("OOPS -$flag flag not specified"); }
+  unless($specified{$flag}) { usage("OOPS -$flag flag not specified"); }
 }
 getopts('i:a:b:k:o:p:e:l:m:t:s:w:y:z:q:',\%opts);
 $i = $opts{"i"}; 
@@ -81,7 +141,7 @@ if($specified{"y"})
 {
   ### make string of populations for ploteig based on -y flag input
   $popstring = "";
-  open(Y,$y) || die("COF");
+  open(Y,$y) || die("Cannot open file: $y");
   while($line = <Y>)
   {
     chomp($line);
