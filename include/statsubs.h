@@ -30,6 +30,7 @@ void tailstats(double *x, double a, int isupper) ;
 double zprob(double p) ;
 void setzptable() ;
 double z2x2(double *a) ;
+int testconchi(double *a, int m, int n) ;
 double conchi(double *a, int m, int n)  ;
 double conchiv(double *a, int m, int n)  ;
 double chitest(double *a, double *p, int n) ;
@@ -68,6 +69,7 @@ void genbin(double *a, int n, double p) ;
 void genlogbin(double *a, int n, double p) ;
 int ifirstgt(int val, int *tab, int n)  ;
 int firstgt(double val, double *tab, int n)  ;
+int lastgt(double val, double *tab, int n)  ; // tab in descending order 
 
 void cinterp(double val, double x0, double x1, 
   double f0, double f0p, double f1, double f1p, double *fv, double *fvp)  ;
@@ -103,6 +105,9 @@ void calcfc(double *c, int n, double rho) ;
 void circconv(double *xout, double *xa, double *xb, int n) ;
 
 double bino(int a, int b) ;
+int ibinomial(int a, int b) ;
+double binomial(int a, int b) ;
+double factorial(int x) ;
 void setbino(int maxbco) ;
 void destroy_bino() ; 
 double exx(double x) ; 
@@ -137,4 +142,45 @@ double truncexpmean(double m, double thresh, int isupper) ;
 
 void jitter(double *xout, double *xin, int n)   ; 
 void mannwhit(double *a, int na, double *b, int nb, double *pu, double *pv, double *ppv) ;
+void calcms(double *a, int n, double *pmean, double *psdev)  ;
+double poissmeanx (double mean) ; 
+void balancemat(double *gam, double *pp, int n)  ;
+double foldfun(double lo, double hi, double val) ;
+double ess(double *wt, int n)  ;
+void msd(double *mean, double *sd, double *a, int n) ;
+double emlogmax(double *wt, double *mat, double *p, int neq, int nv, int niter) ; 
+double oasrho(double *covar, double yn, int p) ;
+double oascovar(double *out, double *covar, double yn, int p) ;
+
+#ifndef CORRDEF
+typedef struct {
+  double S0 ; 
+  double S1 ; 
+  double S2 ; 
+  double S11 ; 
+  double S12 ; 
+  double S22 ; 
+  double m1 ;
+  double m2 ;
+  double v11 ;
+  double v12 ;
+  double v22 ;
+  double corr ;
+  double Z ;
+} CORR; 
+
+int calccorr(CORR *corrpt, int mode, int ztrans)  ;
+void printcorr(CORR *corrpt)  ;
+void printcorrl(CORR *corrpt)  ;
+void clearcorr(CORR *corrpt)  ;
+void symcorr(CORR *corrpt)  ; // force symmetry`
+void addcorr(CORR *corrpt, double x1, double x2) ; 
+void addcorr2 (CORR * corrpt, double x0, double x1, double x2, double x12, double x11,  double x22) ;
+void addcorrn(CORR *corrpt, double x1, double x2, double yn) ; 
+void pluscorr(CORR *out, CORR *c1, CORR *c2) ;
+void minuscorr(CORR *out, CORR *c1, CORR *c2) ;
+#endif 
+#define CORRDEF
+
+
 

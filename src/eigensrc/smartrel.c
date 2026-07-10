@@ -228,6 +228,10 @@ void dofstxx (double *fstans, double *fstsd, SNP ** xsnplist, int *xindex,
 void fixwt (SNP ** snpm, int nsnp, double val);
 
 int
+ridoutlierx (double *evecs, int n, int neigs,
+	    double thresh, int *badlist, OUTLINFO ** outinfo) ;
+
+int
 main (int argc, char **argv)
 {
 
@@ -553,7 +557,7 @@ main (int argc, char **argv)
     // last pass skips outliers 
     numoutleigs = MIN (numoutleigs, nrows - 1);
     nbad =
-      ridoutlier (evecs, nrows, numoutleigs, outlthresh, badlist, outinfo);
+      ridoutlierx (evecs, nrows, numoutleigs, outlthresh, badlist, outinfo);
     if (nbad == 0)
       break;
     for (i = 0; i < nbad; i++) {

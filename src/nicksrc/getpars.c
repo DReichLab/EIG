@@ -4,14 +4,14 @@
 #include <stdarg.h>
 
 #define MAXSTR  5000
-#define MAXPARS 200
+#define MAXPARS 400
 
 #include "nicklib.h"
 #include "getpars.h"
 #include "strsubs.h" 
 
 /** 
- a very simple keyword parameter cracker 
+ a simple keyword parameter cracker 
  comments with line starting #  
  syntax:  keyword param(s)   
  not designed to read large databases (needs hash code for that)
@@ -21,32 +21,75 @@ void stripcomment (char *str);
 int findpname (phandle * pp, char *parname);
 int indxstring (char **ppars, int npars, char *ww);
 
+static int plusloopcheck = 0 ;
+
 static int parchange = 0;
 static int debug = NO;
+static int readpars(phandle *pp, char *fname, char **ppars, char **pdata) ;
 
-phandle *
-openpars (char *fname)
 
-/* constructor */
+
+
+int fixpars(phandle  *pp,  char *tag)  
 {
-  phandle *pp;
-  FILE *ff;
+  char  *sx ; 
+  char **ppars, **pdata ; 
+  int npars ;
+  int k, x, t, a, nfix = 0  ; 
+  char *wk,  *ww ;
+
+  if (tag == NULL) return 0 ;
+
+  ppars = pp -> ppars ; 
+  pdata = pp -> pdata ; 
+  npars = pp -> numpars ; 
+  t = strlen(tag) ; 
+  ZALLOC(wk, t+2, char) ;
+  strcpy(wk, tag) ; strcat(wk, ":") ; 
+  for (k=0; k<npars; ++k) { 
+   sx = strstr(ppars[k], wk) ; 
+   if (sx != ppars[k]) continue ; 
+   sx = strchr(ppars[k], ':') ; 
+   sx = sx+1 ; 
+   a = indxstring (ppars, npars, sx) ;
+   if (a>=0) ppars[a][0] = CNULL ; // delete old parameter
+
+   ww = strdup(sx) ;
+   strcpy(ww, sx) ;
+
+   freestring(&ppars[k]) ; 
+   ppars[k] = strdup (ww);
+   freestring(&ww) ;
+   ++nfix ;
+
+  }
+
+  free(wk) ;
+
+  return nfix ;
+
+}
+
+int
+readpars(phandle *pp, char *fname, char **ppars, char **pdata) 
+{
 
   char line[MAXSTR + 1];
   char str[MAXSTR];
   char ww[MAXSTR];
   char rest[MAXSTR];
 
-  char *ppars[MAXPARS];
-  char *pdata[MAXPARS];
-
   int npars = 0, i;
   int len, plen, t;
 
-  pp = (phandle *) malloc (sizeof (phandle));
+  FILE *ff;
+
+  ++plusloopcheck ; 
+  if (plusloopcheck >= 100) fatalx("+++ include files looping\n") ;
+
   ff = pp->fx = fopen (fname, "r");
   if (ff == NULL) {
-    perror ("Can't open file\n");
+    perror ("(getpars) Can't open file \n");
     fatalx ("can't open %s\n", fname);
   }
 
@@ -63,6 +106,13 @@ openpars (char *fname)
       if (ww[0] == '#')
         continue;
       /*AT: 12/2/04: Adding check to make sure that the parameter name ends in : */
+      t = strcmp(ww, "+++") ; 
+      if (t==0) { 
+        stripcomment (rest);
+        striptrail (rest, ' ');   /* no trailing blanks */
+        npars += readpars(pp, rest, ppars+npars, pdata + npars) ;
+        continue ;
+      }
       plen = strlen (ww);
       if (ww[plen - 1] != ':')
         printf
@@ -72,7 +122,6 @@ openpars (char *fname)
       if (t >= 0)
         fatalx ("duplicate parameter: %s\n", ww);
       ppars[npars] = strdup (ww);
-
       stripcomment (rest);
       striptrail (rest, ' ');   /* no trailing blanks */
       pdata[npars] = strdup (rest);
@@ -84,13 +133,34 @@ openpars (char *fname)
 
     }
   }
+
+
+  return npars ;
+
+
+}
+
+phandle *
+openpars (char *fname)
+
+/* constructor */
+{
+  phandle *pp;
+
+  char *ppars[MAXPARS];
+  char *pdata[MAXPARS];
+
+  int npars = 0, i;
+
+  pp = (phandle *) malloc (sizeof (phandle));
+
+  npars = readpars(pp, fname, ppars, pdata) ;
   pp->numpars = npars;
 
-  if (npars > 0) {
-    ZALLOC (pp->ppars, npars, char *);
-    ZALLOC (pp->pdata, npars, char *);
-  }
-  else {
+    if (npars>MAXPARS) fatalx("too many parameters: %d\n", npars) ;
+    ZALLOC (pp->ppars, MAXPARS, char *);
+    ZALLOC (pp->pdata, MAXPARS, char *);
+  if (npars == 0)  {
     fprintf (stderr, "***warning: no parameters in %s\n", fname);
   }
 
@@ -209,9 +279,46 @@ getint (phandle * pp, char *parname, int *kret)
     return 1;
   }
 
+  if (strcmp (str, "yes") == 0) {
+    *kret = YES;
+    return 1;
+  }
+  if (strcmp (str, "no") == 0) {
+    *kret = NO;
+    return 1;
+  }
+
   *kret = atoi (str);
   return 1;
 }
+
+int
+getlong (phandle * pp, char *parname, long *kret)
+{
+
+  char *field[MAXFIELD];
+  char str[MAXSTR];
+  int n, kode;
+
+  kode = findpname (pp, parname);
+  if (kode < 0)
+    return kode;
+  n = splitup (pp->pdata[kode], field, MAXFIELD);
+  strcpy (str, field[0]);
+  freeup (field, n);
+  if (strcmp (str, "YES") == 0) {
+    *kret = YES;
+    return 1;
+  }
+  if (strcmp (str, "NO") == 0) {
+    *kret = NO;
+    return 1;
+  }
+
+  *kret = atol (str);
+  return 1;
+}
+
 
 int
 getints (phandle * pp, char *parname, int *aint, int nint)
@@ -358,8 +465,10 @@ writepars (phandle * pp)
   if (pp == NULL)
     fatalx ("(writepars) phandle not open\n");
   for (k = 0; k < pp->numpars; k++) {
+    if (pp->ppars[k][0] == CNULL) continue ;
     printf ("%s %s\n", pp->ppars[k], pp->pdata[k]);
   }
+  fflush(stdout) ; 
 }
 
 void
@@ -447,4 +556,47 @@ dostrsub (phandle * pp)
     dostrsub (pp);
 
 }
+
+  
+void mkparamfile(char *logfile, char *outparams) 
+{
+  FILE *fff, *fout ; 
+  char line[MAXSTR+1] ;
+  int sw = 0 ; 
+
+  openit(outparams, &fout, "w") ;
+  openit(logfile, &fff, "r") ;
+
+  while (fgets(line, MAXSTR, fff) != NULL)  {
+   if ((sw==0) && (strstr(line, "###start: params") != NULL)) { 
+    sw = 1 ; 
+    continue ; 
+   } 
+   if ((sw==1) && (strstr(line, "###end: params") != NULL)) { 
+    sw = 2 ; 
+    break ;
+   } 
+   fprintf(fout, "%s", line) ;
+  }
+
+  fclose(fout) ;
+  fclose(fff) ;
+
+}
+
+void writeparsx (phandle * pp)
+{
+  int k;
+  if (pp == NULL)
+    fatalx ("(writeparsx) phandle not open\n");
+
+  printf("###start: params\n") ;
+
+  for (k = 0; k < pp->numpars; k++) {
+    printf ("%s %s\n", pp->ppars[k], pp->pdata[k]);
+  }
+  printf("###end: params\n") ;
+  fflush(stdout) ;
+}
+
 

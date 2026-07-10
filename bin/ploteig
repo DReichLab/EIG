@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl  -w 
+#!/usr//bin/perl  -w 
 
 ### ploteig -i eigfile -p pops -c a:b [-t title] [-s stem] [-g gstem] [-o outfile] [-x] [-k]  [-y] [-z sep] -r colorstring -m xmul -n ymul 
 use Getopt::Std ;
@@ -9,9 +9,12 @@ use File::Basename ;
 ## NEW if pops is a file names are read one per line
 ## scaling on x, y axes 
 
-getopts('i:o:p:c:s:d:z:t:r:m:n:g:xkyq',\%opts) ;
+getopts('i:o:p:c:s:d:z:t:r:m:n:g:e:xkuybq',\%opts) ;
 $postscmode = $opts{"x"} ;
 $oldkeystyle =  $opts{"y"} ;
+$nokey =  $opts{"b"} ;
+$under =  $opts{"u"} ;
+
 $nopoptitle = $opts{"q"} ;
 $kflag = $opts{"k"} ;
 $keepflag = 1 if ($kflag) ;
@@ -37,6 +40,11 @@ $title = "" ;
 if (defined $opts{"t"}) {
  $title = $opts{"t"} ;
 }
+
+if (defined $opts{"e"}) {
+ $ellfile = $opts{"e"} ;
+}
+
 if (defined $opts{"i"}) {
  $infile = $opts{"i"} ;
 }
@@ -92,17 +100,55 @@ if (defined $opts{"o"}) {
  $gnfile = $opts{"o"} ;
 }
 
+$ellnum = 0 ;
+if (defined $ellfile) { 
+$ellhdr = <<'END'; 
+set parametric
+fx(a, b, phi, m0, t) = a*cos(phi)*cos(t)+b*sin(phi)*sin(t)  + m0
+fy(a, b, phi, m1, t) = -a*sin(phi)*cos(t)+b*cos(phi)*sin(t)  + m1
+END
+open (ELL1, "$ellfile") || die "can't open $ellfile\n" ;
+foreach $line (<ELL1>) { 
+ ($x, $y) = split " " , $line; 
+ next unless (defined $y) ; 
+ if ($x =~ /vjack:/) {
+  $id = $y ; 
+ }
+
+ if ($x =~ /sample:/) {
+  $id = $y ; 
+ }
+
+ if ($x =~ /ellcoords:/) { 
+  ($x, $m0, $m1, $a, $b, $phi) = split " ", $line ; 
+  $pstring = <<"END"; 
+m0 = $m0, m1 = $m1, a = $a, b = $b, phi = $phi, fx(a, b, phi, m0, t), fy(a, b, phi, m1, t) with lines title "$id"
+END
+chomp $pstring ; 
+ $ELLS[$ellnum] = $pstring ; 
+ ++$ellnum ; 
+ }
+}}
+
 
 @T = () ; ## trash 
+$place = "outside" ; 
+$place = "under" if ($under) ; 
 open (GG, ">$gnfile") || die "can't open $gnfile\n" ;
 print GG "## " unless ($postscmode) ;
 print GG "set terminal postscript color noenhanced\n" ;
 print GG "set title  \"$title\" \n" ; 
-print GG "set key outside\n" unless ($oldkeystyle) ; 
+if (!$nokey) { 
+print GG "set key $place\n" unless ($oldkeystyle) ; 
+} 
+else { 
+print GG "set nokey\n"  ; 
+}
 print GG "set xlabel  \"eigenvector $c1\" \n" if ($xmul == 1) ; 
 print GG "set xlabel  \"eigenvector $c1 (* $xmul) \" \n" if ($xmul != 1) ; 
 print GG "set ylabel  \"eigenvector $c2\" \n" if ($ymul == 1) ; 
 print GG "set ylabel  \"eigenvector $c1 (* $ymul) \" \n" if ($ymul != 1) ; 
+print GG $ellhdr  if ($ellnum>0) ; 
 print GG "plot " ;
 $np = @P ;
 $lastpop = $P[$np-1] ;
@@ -129,7 +175,15 @@ foreach $pop (@P)  {
  }
  close YY ;
 }
+if ($ellnum>0) { 
+ print GG ", \\\n"  ; 
+ foreach $k (0..$ellnum-1) { 
+  print GG " $ELLS[$k]" ; 
+  print GG ", \\\n" unless ($k == ($ellnum-1)) ; 
+ }
+}
 print GG "\n" ;
+
 print GG "## "  if ($postscmode) ;
 print GG "pause 9999\n"  ;
 close GG ;
@@ -142,7 +196,7 @@ $psfile = "$stem.ps" ;
   $psfile  =~ s/xtxt/ps/ ;
  }
 system "gnuplot < $gnfile > $psfile" ;
-system "/home/np29/bin/fixgreen  $psfile" ;
+system "/home/np29/o2bin/fixgreen  $psfile" ;
 system "ps2pdf  $psfile " ;
 }
 unlink (@T) unless $keepflag ;
@@ -187,7 +241,11 @@ print "## necessary if .xtxt file is to be hand edited\n" ;
 print "[-r colorstringpairs or colorstringfile]\n" ;
 print "[-g gstem]     make gstem.xtxt gstem.ps  gstem.pdf  \n" ;
 print "[-y]           put key at top right inside box (old mode)\n" ;
+print "[-b]           No key \n" ;
+print "[-u]           Legend underneath \n" ;
 print "[-t]           title (legend)\n" ;
+print "[-e ellout]    plot confidence ellipses.  ellout has (probably) been made by elloutname: in smartpca\n" ;
+
 
 print "The xtxt file is a gnuplot file and can be easily hand edited.  Intermediate files
 needed if you want to make your own plot\n" ;

@@ -8,8 +8,8 @@ override LDLIBS += -lgsl -lopenblas -lm -lpthread
 #override LDFLAGS += -L/usr/local/opt/openblas/lib -L/usr/local/opt/gsl/lib
 # Harvard Medical School O2 cluster additions
 ifdef SLURM_CONF
-override CFLAGS += -I/n/app/openblas/0.2.19/include -I/n/app/gsl/2.3/include
-override LDFLAGS += -L/n/app/openblas/0.2.19/lib -L/n/app/gsl/2.3/lib/
+override CFLAGS += -I ./nicksrc -I/n/app/openblas/0.3.28-gcc-14.2.0/include -I/n/app/gsl/2.8-gcc-14.2.0/include -fno-common
+override LDFLAGS += -L/n/app/openblas/0.3.28-gcc-14.2.0/lib -L/n/app/gsl/2.8-gcc-14.2.0/lib/
 endif
 
 ifeq ($(OPTIMIZE), 1)
@@ -33,14 +33,16 @@ NLIB = $(ND)/libnick.a
 # ----- phony targets
 .PHONY: all clean clobber install
 
-EXE = baseprog convertf mergeit pca \
+EXE = baseprog convertf mergeit pca nickhash merge_transpose \
+	multimerge geno_single transpose \
 	$(ED)/pcatoy $(ED)/smartrel $(ED)/smarteigenstrat \
 	$(ED)/twstats $(ED)/eigenstrat $(ED)/eigenstratQTL $(ED)/smartpca
 
 all:    $(EXE)
 
 install:  all
-	mv $(EXE) ../bin
+	mkdir -p  ../bin
+	cp $(EXE) ../bin
 
 clobber:
 	rm -f *.o */*.o */*.a $(ND)/*.o $(ED)/*.o $(KD)/*.o
@@ -54,25 +56,37 @@ clean:
 $(NLIB):
 	$(MAKE) -C $(ND)
 
-baseprog:	baseprog.o mcio.o egsubs.o admutils.o h2d.o $(ED)/exclude.o $(NLIB)
+baseprog:	baseprog.o mcio.o egsubs.o admutils.o h2d.o $(ED)/exclude.o geno.o $(NLIB)
 
-convertf:	convertf.o mcio.o egsubs.o admutils.o h2d.o $(ED)/exclude.o $(NLIB)
+convertf:	convertf.o mcio.o egsubs.o admutils.o h2d.o $(ED)/exclude.o geno.o $(NLIB)
 
-mergeit:	mergeit.o mcio.o admutils.o $(NLIB)
+mergeit:	mergeit.o mcio.o admutils.o geno.o $(NLIB)
 
 pca:	pca.o $(ED)/eigsubs.o eigensrc/eigx.o $(NLIB)
 
 $(ED)/pcatoy: 	$(ED)/pcatoy.o eigensrc/eigsubs.o eigensrc/eigx.o $(NLIB)
 
 $(ED)/smartrel:	$(ED)/smartrel.o twsubs.o mcio.o qpsubs.o admutils.o egsubs.o regsubs.o \
-		$(ED)/eigsubs.o $(ED)/eigx.o $(ED)/smartsubs.o $(NLIB)    
+		$(ED)/eigsubs.o $(ED)/eigx.o $(ED)/smartsubs.o geno.o $(NLIB)    
 
-$(ED)/smarteigenstrat:	$(ED)/smarteigenstrat.o mcio.o admutils.o $(NLIB)
+$(ED)/smarteigenstrat:	$(ED)/smarteigenstrat.o mcio.o admutils.o geno.o $(NLIB)
 
 $(ED)/twstats:	$(ED)/twstats.o $(NLIB) 
 
 $(ED)/smartpca:	$(ED)/smartpca.o $(ED)/eigsubs.o $(ED)/exclude.o $(ED)/smartsubs.o $(ED)/eigx.o \
-		mcio.o qpsubs.o admutils.o egsubs.o regsubs.o gval.o \
+		mcio.o qpsubs.o admutils.o egsubs.o regsubs.o gval.o geno.o \
 		$(NLIB) \
           	$(KD)/kjg_fpca.o $(KD)/kjg_gsl.o 
           	#-lpthread
+
+multimerge: multimerge.o mcio.o admutils.o egsubs.o geno.o $(NLIB)
+nickhash:  nickhash.o admutils.o $(NLIB)
+merge_transpose: merge_transpose.o geno.o
+transpose: transpose.o geno.o
+geno_single: geno_single.o geno.o
+
+smartpca:   $(ED)/smartpca
+	cp $(ED)/smartpca smartpca
+
+pcatoy:   $(ED)/pcatoy
+	cp $(ED)/pcatoy pcatoy

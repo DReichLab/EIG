@@ -10,6 +10,7 @@
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/prctl.h>
 #include <xsearch.h>   
 
 
@@ -222,6 +223,14 @@ fatalx (char *fmt, ...)
   fprintf (stderr, "fatalx:\n%s", Estr);
   fflush (stderr);
   abort ();
+}
+
+void setdump(int cdump) 
+{
+
+  prctl(PR_SET_DUMPABLE, cdump) ; 
+
+
 }
 
 
@@ -572,7 +581,7 @@ makedfn (char *dirname, char *fname, char *outname, int maxstr)
   char *ss;
   int len;
 
-  if ((dirname == NULL) || (fname[0] == '/')) {
+  if ((dirname == NULL) || (fname[0] == '/') || (fname[0] == '.'))  {
 
 /* if fname starts with / we assume absolute pathname */
     len = strlen (fname);
@@ -698,7 +707,7 @@ numcols (char *name)
   int nsplit, num = 0;
 
   if (name == NULL)
-    fatalx ("(numlines)  no name\n");
+    fatalx ("(numcols)  no name\n");
   openit (name, &fff, "r");
   while (fgets (line, MAXSTR, fff) != NULL) {
     nsplit = splitup (line, spt, MAXCOLS);
@@ -761,6 +770,24 @@ ftest (char *sss)
 }
 
 
+void
+openitntry (char *name, FILE ** fff, char *type, int ntry)
+{
+  char *ss;
+  int iter, ret ; 
+
+  for (iter=1; iter <= ntry; ++iter) { 
+   ret = openit_trap (name, fff, type) ; 
+   if ((ret==YES) && (iter==1)) return ;
+    if (ret == YES) { 
+     printf("*** open for %s succeeds but on try %d ***\n", name, iter) ;
+     return ; 
+    }
+  }
+  fatalx("(openit) fail for %son %d tries\n", name, ntry) ; 
+}
+
+
 int
 openit_trap (char *name, FILE ** fff, char *type)
 {
@@ -789,7 +816,6 @@ openit (char *name, FILE ** fff, char *type)
   if (*fff == NULL) {
     ss = strerror (errno);
     printf ("bad open %s\n", name);
-// system("lsof | fgrep np29") ;
     fatalx ("(openit) can't open file %s of type %s\n error info: %s\n", name, type,
             ss);
   }
@@ -814,6 +840,70 @@ void fcheckw(char *name)
  fclose(fff) ;
 
 
+}
+
+
+int fdescwd()  
+{
+
+ int fdes ; 
+
+  fdes = open(".", O_RDONLY) ; 
+  return fdes ; 
+// to chdir ... fchdir(fdes) ; 
+
+}
+
+
+
+int
+getjj (int **xx, int maxrow, int numcol, char *fname)
+{
+
+  char line[MAXSTR];
+  char *spt[MAXFF];
+  char *sx;
+  int nsplit, i, j, num = 0, maxff;
+  FILE *fff;
+  int nbad = 0;
+
+  if (fname == NULL)
+    fff = stdin;
+  else {
+    openit (fname, &fff, "r");
+  }
+  maxff = MAX (MAXFF, numcol);
+
+  while (fgets (line, MAXSTR, fff) != NULL) {
+    nsplit = splitup (line, spt, maxff);
+    if (nsplit == 0) {
+      freeup (spt, nsplit);
+      continue;
+    }
+    sx = spt[0];
+    if (sx[0] == '#') {
+      freeup (spt, nsplit);
+      continue;
+    }
+    if (nsplit < numcol) {
+      ++nbad;
+      if (nbad < 10)
+        printf ("+++ bad line: nsplit: %d numcol: %d\n%s\n", nsplit, numcol,
+                line);
+      continue;
+    }
+    if (num >= maxrow)
+      fatalx ("too much data\n");
+    for (i = 0; i < numcol; i++) {
+      xx[i][num] = atoi (spt[i]);
+    }
+    freeup (spt, nsplit);
+    ++num;
+  }
+  if (fname != NULL)
+    fclose (fff);
+  if (nbad>0) return -nbad ;
+  return num;
 }
 
 
@@ -863,6 +953,7 @@ getxx (double **xx, int maxrow, int numcol, char *fname)
   }
   if (fname != NULL)
     fclose (fff);
+  if (nbad>0) return -nbad ;
   return num;
 }
 
@@ -962,6 +1053,7 @@ getnamesstripcolon (char ****pnames, int maxrow, int numcol, char *fname,
   }
   if (fname != NULL)
     fclose (fff);
+  if (nbad>0) return -nbad ;
   return num;
 }
 
@@ -1021,6 +1113,7 @@ getnameslohi (char ****pnames, int maxrow, int numcol, char *fname, int lo,
   }
   if (fname != NULL)
     fclose (fff);
+  if (nbad>0) return -nbad ;
   return num;
 }
 
@@ -1070,6 +1163,7 @@ getnames (char ****pnames, int maxrow, int numcol, char *fname)
   }
   if (fname != NULL)
     fclose (fff);
+  if (nbad>0) return -nbad ;
   return num;
 }
 
@@ -1188,6 +1282,7 @@ like getxxnames but file already open
       xx[i][num] = atof (sstt) ;      
     }
     freeup (spt, nsplit);
+  if (nbad>0) return -nbad ;
     ++num;
   }
   return num;
@@ -1519,6 +1614,40 @@ printstringsx (char **ss, int n)
       printf (" %s", "NULL");
   }
 }
+
+
+void
+printstringss (char *sout, char **ss, int n)
+// no newline
+{
+  int k;
+  char *sx ; 
+
+  sx = sout ; 
+
+  for (k = 0; k < n; ++k) {
+    if (ss[k] != NULL)
+      sx += sprintf (sx, " %s", ss[k]);
+    else
+      sx += sprintf (sx, " %s", "NULL") ;
+  }
+}
+
+
+void
+printstringsxfile (char **ss, int n, FILE *fff)
+// no newline
+{
+  int k;
+
+  for (k = 0; k < n; ++k) {
+    if (ss[k] != NULL)
+      fprintf (fff, " %s", ss[k]);
+    else
+      fprintf (fff, " %s", "NULL");
+  }
+}
+ 
  
 void
 printstrings (char **ss, int n)
@@ -1539,6 +1668,7 @@ ridfile (char *fname)
 {
   int t;
 
+  if (file_exists(fname) == NO) return -1 ; 
   chmod (fname, 0777);
   t = unlink (fname);
   return t;
@@ -1662,6 +1792,7 @@ getjjnames (char ***pnames, int **jj, int maxrow, int numcol, char *fname)
   }
   if (fname != NULL)
     fclose (fff);
+  if (nbad>0) return -nbad ;
   return num;
 }
 
@@ -1986,17 +2117,100 @@ char *mytemp (char *qqq)
 // make temporary file name.   qqq is header string, eg "junk1" 
 {
   char ss[MAXSTR] ; 
+  char *tmpdir ; 
   int t ; 
 
   t = (int) getpid() ; 
-  sprintf(ss, "/tmp/%s.%d", qqq, t) ; 
+  tmpdir = getenv("STMP") ;  
+  if (tmpdir == NULL) tmpdir = strdup("/tmp") ;
+  sprintf(ss, "%s/%s.%d", tmpdir, qqq, t) ; 
   return strdup(ss) ;
 }
+
+void randomname(char **ans) 
+{
+  char name[128] ;  
+  int pid ; 
+  static int ncall ;
+
+  ++ncall ;
+  pid = getpid() ; 
+  sprintf(name, "rrr:%d:%d", pid, ncall) ;
+
+  *ans = strdup(name) ; 
+
+}
+
+
+int getchromlist(char **list, char *bamname) 
+// obsolete 
+{ 
+ char *tname  ;
+ char sss[MAXSTR] ;  
+ int n, t ; 
+
+  FILE *fff;
+  char line[MAXSTR];
+  char *spt[MAXFF];
+  char *sx;
+  int nsplit, num = 0;
+
+ tname = mytemp("bamhdr") ; 
+ sprintf(sss, "samtools view -H %s | fgrep @SQ > %s\n", bamname, tname) ;
+ system(sss) ;  
+
+ n = numlines(tname) ; 
+ if (list == NULL) {
+  ridfile(tname) ;
+  return n ; 
+ }
+
+  openit (tname, &fff, "r");
+  n = 0 ;
+  while (fgets (line, MAXSTR, fff) != NULL) {
+    nsplit = splitupx (line, spt, MAXFF, CTAB);
+    if (nsplit == 0)
+      continue;
+    sx = spt[0];
+    t = strcmp(sx, "@SQ") ;
+    if (t != 0) {
+      freeup (spt, nsplit);
+      continue;
+    }
+    list[n] = strdup(spt[1]) ;
+    substring(&list[n], "SN:", "") ;
+    ++n ; 
+    freeup (spt, nsplit);
+  }
+  ridfile(tname) ;
+  return n ;
+}
+
+int getreglist (char ***preglist, char *bamname) 
+{
+   char ss[1024] ; 
+   int n ; 
+   char *tempname ; 
+   
+   tempname = mytemp("getreg") ; 
+   sprintf(ss, 
+    "samtools view -H %s | fgrep @SQ | fgrep SN: | cut -f 2 | sed -e \"s/SN://\"  > %s", 
+     bamname, tempname) ; 
+    system(ss) ;
+    n = numlines(tempname) ; 
+    ZALLOC(*preglist, n, char *) ; 
+    n = getlist(tempname, *preglist) ; 
+    unlink(tempname) ; 
+
+   return n ;
+
+}
+
 
 void printslurmenv () 
 {
  char *ss ; 
- char sss[256] ;  
+ char sss[MAXSTR] ;  
 
  ss = getenv("SLURM_JOBID") ; 
  if (ss==NULL) return ; 
@@ -2041,7 +2255,7 @@ numcolsq (char *name)
   int nsplit, num = 0;
 
   if (name == NULL)
-    fatalx ("(numlines)  no name");
+    fatalx ("(numcolsq)  no name");
   openit (name, &fff, "r");
   while (fgets (line, MAXSTR, fff) != NULL) {
     subcolon(line) ;
@@ -2108,11 +2322,12 @@ getxxq (double **xx, int maxrow, int numcol, char *fname)
   }
   if (fname != NULL)
     fclose (fff);
+  if (nbad>0) return -nbad ;
   return num;
 }
 
 
-int copyfs(char *infile, FILE *fff) 
+long copyfs(char *infile, FILE *fff) 
 // copy file  to stream
 {
   char line[MAXSTR];
@@ -2187,9 +2402,159 @@ void writestrings(char *fname, char **ss, int n)
 
 }
 
+int file_exists(const char *filename)
+{
+    FILE *fp = fopen(filename, "r");
+    int is_exist = NO;
+
+    if (fp != NULL)
+    {
+        is_exist = YES;
+        fclose(fp); // close the file
+    }
+    return is_exist;
+}
 
 
+int getlist(char *name, char **list) 
+{
+  FILE *fff ;
+  char line[MAXSTR] ;
+  char *spt[MAXFF] ;
+  char *sx ;
+  int nsplit, num=0 ;
+
+  num = 0;
+  if (name == NULL) fatalx("(numlines)  no name")  ;
+  openit(name, &fff, "r") ;
+  while (fgets(line, MAXSTR, fff) != NULL)  {
+   nsplit = splitup(line, spt, MAXFF) ;
+   if (nsplit==0) continue ;
+   sx = spt[0] ;
+   if (sx[0] == '#') {
+    freeup(spt, nsplit) ;
+    continue ;
+   }
+   list[num] = strdup(sx) ;
+   ++num ;
+   freeup(spt, nsplit) ;
+  }
+  fclose(fff) ;
+  return num ;
+}
 
 
+char *runcmd(char *cmd) 
+{
+#define BLEN 1024
+  static int ncall = 0, cmdlen, blen = BLEN ;
+  char buff[BLEN] ;
+  char *tempname ; 
 
+  ++ncall ; 
+  sprintf(buff, "junkcmd:%d", ncall) ;
+  tempname = mytemp(buff) ; 
+  cmdlen = snprintf(buff, blen, "%s > %s", cmd, tempname) ; 
+  if (cmdlen >= blen) fatalx("(runcmd) increase BLEN; very long command %s\n", cmd) ;
+  system (buff) ; 
+
+  return strdup(tempname) ;
+
+}
+void printcmdline(int argc, char **argv)  
+{
+  int k ; 
+
+  printf("## ") ;
+  for (k=0; k<argc; ++k) { 
+   printf(" %s", argv[k]);  
+  }
+  printnl() ;
+
+}
+
+char *strstrr(char *stack, char *needle) 
+// kast occurrence of needle in stack
+{
+
+ char *sa = NULL, *sb, *sx ; 
+
+ sx = stack ; 
+ for (;;) { 
+  sb = strstr(sx, needle) ; 
+  if (sb  == NULL) return sa ; 
+  sa = sb ;
+  sx = sb+1 ;
+ }
+}
+
+int canwrite(char *fname) 
+// OK if file does not exist or is writable
+{
+
+ int x ; 
+ 
+ x = access(fname, F_OK) ; 
+ if (x<0) return YES ;
+ x = access(fname, W_OK) ; 
+ if (x >= 0) return YES ;
+ 
+ return NO ;
+
+
+}
+
+
+int isdata(char *buff, long bufflen) 
+{
+ long k ; 
+ char c, *x ; 
+
+ for (k=0; k<bufflen; ++k) { 
+
+  c = buff[k] ; 
+  if (isspace(c)) continue ; 
+  if (c == '#') return NO ; 
+  return YES ;
+ }
+
+ return NO ;
+
+}
+
+long numlinesx(char *name)  
+{
+ FILE *fff ; 
+ char *line = NULL;
+ size_t linecap = 0;
+ ssize_t linelen;
+ long num = 0 ; 
+
+ openit(name, &fff, "r") ;
+
+ while ((linelen = getline(&line, &linecap, fff)) > 0) {
+
+  if (isdata(line, linelen) == NO) continue ; 
+  ++num ;
+
+ }
+
+ fclose(fff) ; 
+ freestring(&line) ;
+ return num ;
+
+}
+
+void mkcmdline(char *ss, char *argv0, char *version) 
+{
+  char *sx  ; 
+  char ss1[MAXSTR] ; 
+
+  getcwd(ss1, MAXSTR) ; 
+  sx = ss ; 
+  sx += sprintf(sx, "executable: %s", argv0) ; 
+  sx += sprintf(sx, " version: %s", version) ; 
+  sx += sprintf(sx, " cwd: %s", ss1) ; 
+
+}
 

@@ -28,10 +28,11 @@
  (Broad institute, Harvard Medical, Harvard Evolutionary Biology)
  Improvements and elimination of FORTRAN code by Chris Chang (BGI) 
 
- Code added to support grm output + improved ld rregression by Alexander Gusev 
+ Code added to support grm output + improved ld regression by Alexander Gusev 
+ minchrom. maxchrom added
 */
 
-#define WVERSION   "18140"
+#define WVERSION   "18725" 
 
 /** 
 Simple eigenvector analysis
@@ -139,6 +140,12 @@ topright added -- flips top 2 eigenvectors if wanted
 dotpopsmode NO default
 fstnum added
 megaoutname added (mega output)
+
+Cokie Parker inpack speedup installed
+bugfix:  shrinkmode + elloutname (ellipses) did not mesh
+minchrom maxchom added
+
+instem added 
 */
 
 #include <pthread.h>
@@ -189,6 +196,8 @@ int maxmissing = 9999999;
 int lopos = -999999999, hipos = 999999999;      // use with xchrom
 int fstverbose = NO ; 
 
+int minchrom = -999, maxchrom = 999 ;
+
 int packout = -1;
 extern enum outputmodetype outputmode;
 extern int checksizemode;
@@ -215,6 +224,7 @@ char *outinfoname = NULL;
 char *fstdetailsname = NULL;
 char *elloutname = NULL ; 
 char *megaoutname = NULL ; 
+double megascale = 1000 ;
 double ellconf = -1 ; 
 int fstsnpout = NO ; 
 
@@ -229,12 +239,14 @@ double pvhit = .001;
 double pvjack = 1.0e-6;
 double *chitot;
 int *xpopsize;
+int *popsize;
 
 char *genotypename = NULL;
 char *snpname = NULL;
 char *indivname = NULL;
 char *badsnpname = NULL;
 char *deletesnpoutname = NULL;
+char *instem = NULL ;
 char *poplistname = NULL;
 char *xregionname = NULL;       /* physical positions of SNPs to exclude */
 char *outliername = NULL;
@@ -307,6 +319,7 @@ double twnorm (double lam, double m, double n);
 double rhoinv (double x, double gam);
 
 void readcommands (int argc, char **argv);
+// void setdump(int dump) ; 
 int loadindx (Indiv ** xindlist, int *xindex, Indiv ** indivmarkers,
               int numindivs);
 void loadxdataind (double *xrow, SNP ** snplist, int ind, int ncols);
@@ -392,13 +405,21 @@ void printevecs (SNP ** snpmarkers, Indiv ** indivmarkers, Indiv ** xindlist,
                  int numeigs, double *eigenvecs, double *eigenvals,
                  FILE * ofile);
 
-void doshrinkp (double *mmat, int m, int n, int *xindex, SNP ** xsnplist, double *xcoeffs) ;
+void doshrinkp (double *mmat, int m, int n, int *xindex, SNP ** xsnplist, double *xcoeffs, double *pubcoeffs) ;
 void estedgar(double *edgarw, double *lambdav, int lentop, int lenspec, double gamm, double yjfac) ;
 int setnstw(double *lambda, int len, int nostatslim) ;
 void kjg_fpca (size_t K, size_t L, size_t I, double *eval, double *evec) ;
 
 int mpestimate(double *eigs, int neigs, double *peffect, double *psigma) ; 
 void printmega(char *outname, char **eglist, int numeg, double *fstsc) ;
+
+double
+dofstnumx_eig (double *fst, double *fstest, double *fstsig, int *qfstnum, SNP ** xsnplist,
+           int *xindex, int *xtypes, int nrows, int ncols, int numeg,
+           int nblocks, Indiv ** indivmarkers, int fstmode) ;
+
+// fstmode is classic mode (smartpca)
+// fstmode 2  is fstdmode
 
 uint32_t
 triangle_divide (int64_t cur_prod, int32_t modif)
@@ -588,10 +609,10 @@ main (int argc, char **argv)
   double *eigscmat ;  // scaling matrix for lsqproj
 
   int kk;
-  double *acoeffs, *bcoeffs, *xcoeffs = NULL ;
+  double *acoeffs, *bcoeffs, *xcoeffs = NULL, *pubcoeffs ;
   double **aellc , **bellc ;  
   double *aco, *bco ;
-  double *awk, *bwk ;
+  double *awk, *bwk, *zwk ;
   int rngmode = NO;
 
 
@@ -626,8 +647,10 @@ main (int argc, char **argv)
   cputime(0) ;
   calcmem(0) ;
 
+  if (shrinkmode && (elloutname != NULL)) fatalx("bug fix needed shrinkmode and ellipse code not compatible.  Try rounakmode: YES\n") ;
 
   printf ("## smartpca version: %s\n", WVERSION);
+  setdump(coredump) ;
 
   if (readparsonly) { 
    printf("terminating...\n") ;
@@ -640,7 +663,7 @@ main (int argc, char **argv)
 
   packmode = YES;
   setomode (&outputmode, omode);
-  setfstsnpout(fstsnpout) ; 
+//setfstsnpout(fstsnpout) ; 
 
   if (parname == NULL)
     return 0;
@@ -743,6 +766,8 @@ main (int argc, char **argv)
   if ((ldlimit <= 0) || (ldposlimit <= 0))
     ldregress = 0;
 
+  if (instem != NULL) setinfiles(&indivname, &snpname, &genotypename, instem) ;
+
   numsnps =
     getsnps (snpname, &snpmarkers, 0.0, badsnpname, &nignore, numrisks);
 
@@ -781,10 +806,27 @@ main (int argc, char **argv)
     setstatus (indivmarkers, numindivs, NULL);
     ZALLOC (eglist, maxpops, char *);
     numeg = makeeglist (eglist, maxpops, indivmarkers, numindivs);
+    poplistname = strdup("NULL") ; 
   }
-  for (i = 0; i < numeg; i++) {
-    /* printf("%3d %s\n",i, eglist[i]) ; */
+  printf("poplistname: %s  numpops: %d\n", poplistname, numeg) ;
+
+  ZALLOC(popsize, numeg, int) ; 
+  for (i=0; i<numindivs; ++i) { 
+   indx = indivmarkers[i] ;
+   t = indxstring(eglist, numeg, indx -> egroup) ;
+   if (t>=0) ++popsize[t] ; 
   }
+  for (k=0; k<numeg; ++k) { 
+    printf("population: %32s %10d\n", eglist[k], popsize[k]) ; 
+  }
+  for (k=0; k<numeg; ++k) { 
+    if (popsize[k] == 0) fatalx("missing population (no samples) %s\n", eglist[k]) ;
+  }
+
+  printnl() ;
+
+  printnl() ;
+  fflush(stdout) ;
 
   if (topright != NULL) { 
    toprightindex = indxstring(eglist, numeg, topright) ;
@@ -818,7 +860,12 @@ main (int argc, char **argv)
     }
     if (chrom == zchrom) { 
       cupt->ignore = YES;
-      logdeletedsnp (cupt->ID, "chrom-deltet", deletesnpoutname);
+      logdeletedsnp (cupt->ID, "chrom-deleted", deletesnpoutname);
+      continue ;
+    }
+if ((chrom < minchrom) || (chrom > maxchrom)) { 
+      cupt->ignore = YES;
+      logdeletedsnp (cupt->ID, "chrom-range", deletesnpoutname);
       continue ;
     }
   }
@@ -848,7 +895,7 @@ main (int argc, char **argv)
       logdeletedsnp (cupt->ID, "nodata", deletesnpoutname);
     }
   }
-  printf("snps deleted (nodata): %d.  deletesnpoutname: for details", tt) ;
+  printf("snps deleted (nodata): %d.  deletesnpoutname: for details\n", tt) ;
 
   if (killr2) {
     nkill =
@@ -896,6 +943,8 @@ main (int argc, char **argv)
    printf("removing individuals set Ignore\n") ; 
    numindivs = rmindivs(snpmarkers, numsnps, indivmarkers, numindivs) ;
   }
+
+  setindm(indivmarkers) ;
 
 
   if (missingmode) {
@@ -1264,9 +1313,9 @@ main (int argc, char **argv)
     printf ("number of samples after outlier removal: %d\n", nrows);
   }
 
+ ZALLOC(emean, numeg + numeigs, double) ; 
  if (toprightindex >=0) {  
   
-  ZALLOC(emean, numeg, double) ; 
   ZALLOC(flip, numeigs, int) ; 
   ivclear(flip, -1, numeigs) ; 
   for (j=0; j< MIN(numeigs, 2); ++j) { 
@@ -1289,7 +1338,7 @@ main (int argc, char **argv)
    ellindex[j] = k ; 
    if (k<0) fatalx("*** warning no ellipse for %s\n", elllist[j]) ; 
    indx = ellindivs[j] = indivmarkers[k] ; 
-   printf("elllist: %3d %20s\n", indx -> ID) ; fflush(stdout) ;
+   printf("elllist: %3d %20s\n", j, indx -> ID) ; fflush(stdout) ;
   }
 
   if (outliername != NULL)
@@ -1388,24 +1437,7 @@ main (int argc, char **argv)
      printf("nrows ncols %d %d\n", nrows, ncols) ;  
      ZALLOC(edgarw, m, double) ;  
      vclear(edgarw, 1.0, m) ;  
-/*
-     y = 4339.067 ; 
-     yjfac = (double) nrows * y - (double) numeigs ; 
-     estedgar(edgarw, lambda, numshrink, m-numshrink, y, yjfac) ; 
-     printf("shrink factors: ") ;
-     printmatl(edgarw, 1, numeigs) ; 
-     printnl() ;
-     printnl() ;
 
-     y = (double) ncols / (double) nrows ; 
-     yjfac = (double) nrows * y - (double) numeigs ; 
-     estedgar(edgarw, lambda, numshrink, m-numshrink, y, yjfac) ; 
-     printf("shrink factors: ") ;
-     printmatl(edgarw, 1, numeigs) ; 
-     printnl() ;
-     printnl() ;
-
-*/
      y = zfn/zfp ; 
      yjfac = (double) nrows * y - (double) numeigs ; 
      estedgar(edgarw, lambda, numshrink, m-numshrink, y, yjfac) ; 
@@ -1528,6 +1560,8 @@ main (int argc, char **argv)
     ZALLOC (acoeffs, numindivs * numeigs, double);
     ZALLOC (bcoeffs, numindivs * numeigs, double);
     ZALLOC (xcoeffs, numindivs*numeigs, double) ; 
+    ZALLOC (pubcoeffs, numindivs*numeigs, double) ; 
+    vclear(pubcoeffs, 888888, numindivs*numeigs) ; 
     if (partial_sum_lookup_buf) {
       free (partial_sum_lookup_buf);
       free (binary_rawcol);
@@ -1565,7 +1599,7 @@ main (int argc, char **argv)
 
    }
 
-// evec output
+// evec output main output 
 
     for (i = 0; i < numindivs; i++) {
       indx = indivmarkers[i];
@@ -1581,6 +1615,7 @@ main (int argc, char **argv)
         if (indx -> flag == 7777) y *= edgarw[j] ;  
         if (hiprec) fprintf (ofile, "%12.6f  ", y);
         else fprintf (ofile, "%10.4f  ", y);   // main output
+        pubcoeffs[j*numindivs +i] = y ; 
       }
       if (qtmode) {
         fprintf (ofile, "%15.6e\n", indx->qval);
@@ -1611,6 +1646,8 @@ main (int argc, char **argv)
 
   ZALLOC(awk, t, double) ; 
   ZALLOC(bwk, t, double) ; 
+  ZALLOC(zwk, t, double) ; 
+  vclear(zwk, -777777, t) ; 
 
   setblocks (blstart, blsize, &xnblocks, xsnplist, ncols, blgsize);
   fixwt (xsnplist, ncols, 1.0);
@@ -1655,7 +1692,7 @@ main (int argc, char **argv)
     openit (outputname, &ofile, "w");
   else
     ofile = stdout;
-  doshrinkp (mmat, nrows, ncols, xindex, xsnplist, xcoeffs) ;
+  doshrinkp (mmat, nrows, ncols, xindex, xsnplist, xcoeffs, pubcoeffs) ;
 
   
 
@@ -1668,11 +1705,13 @@ main (int argc, char **argv)
     i = indx -> idnum ; 
     awk[j*nellindivs+jj] = acoeffs[j*numindivs+i] ; 
     bwk[j*nellindivs+jj] = xcoeffs[j*numindivs+i] ; 
+    y = zwk[j*nellindivs+jj] = pubcoeffs[j*numindivs+i] ; 
+    if (y>1000) fatalx("(pubcoeffs not set\n") ;
    }
    aco = awk + j*nellindivs ; 
    bco = bwk + j*nellindivs ; 
    y = vdot(aco, bco, nellindivs) / vdot(aco, aco, nellindivs) ;
-   printf("coeff multiplier (eigenvector %d): %9.3f\n", y, j) ; 
+   printf("coeff multiplier (eigenvector %d): %9.3f\n", j, y) ; 
    vst(aco, aco, y, nellindivs) ; 
    for (jj=0; jj<nellindivs; ++jj) { 
     indx = ellindivs[jj] ; 
@@ -1720,7 +1759,24 @@ main (int argc, char **argv)
   fprintf(ellfile, ":: %s ", outputname) ;
   fprintf(ellfile, "\n") ;
 
+ for (j=0; j<numeigs; ++j) { 
+   if (nellindivs<1) break ; 
+   for (jj=0; jj<nellindivs; ++jj) { 
+    indx = ellindivs[jj] ; 
+    i = indx -> idnum ; 
+    y = zwk[j*nellindivs+jj] = pubcoeffs[j*numindivs+i] ; 
+    if (fabs(y)>1000) fatalx("(pubcoeffs not set %d %d %d\n", j, jj, i) ;
+   }
+ } 
+
  for (jj=0; jj < nellindivs; ++jj) { 
+    indx = ellindivs[jj] ; 
+    i = indx -> idnum ; 
+    for (j=0; j<numeigs; ++j) { 
+     y = emean[j] = pubcoeffs[j*numindivs+i] ;
+     if (fabs(y)>1000) fatalx("(pubcoeffs not set %d %d %d\n", j, jj, i) ;
+    }
+//  printf("zzcheck indiv: %s ", indx -> ID) ;  printmat(emean, 1, numeigs) ;
     indx = ellindivs[jj] ; 
     floatit(jwt, blcnt[jj], nblocks) ; 
     for (bl=0; bl<nblocks; ++bl) { 
@@ -1730,7 +1786,7 @@ main (int argc, char **argv)
    }
   
   if (numeigs<2) continue ; 
-  wjackvest(vvest[jj], vvar[jj], numeigs, jmean[0], jmean, jwt, nblocks) ; 
+  wjackvest(vvest[jj], vvar[jj], numeigs, emean, jmean, jwt, nblocks) ; 
 //   printf("zzbugq: ") ;  printmatl(vvar[jj], numeigs, numeigs) ; 
   vest = vvest[jj] ; 
   var = vvar[jj] ; 
@@ -1740,7 +1796,6 @@ main (int argc, char **argv)
    zzvar[3] = var[1*numeigs+1] ; 
   
 //  printf("zzbugz %d ", jj) ;  printmatl(zzvar, 2, 2) ;
-  emean = jmean[0] ; 
   fprintf(ellfile, "sample: %20s\n", indx -> ID) ;
   printmatlfile(emean, 1, 2, ellfile) ; 
   printmatlfile(zzest, 1, 2, ellfile) ; 
@@ -1885,8 +1940,8 @@ main (int argc, char **argv)
       }
     }
       printnl() ;
+     printf("## end of Fst statistics between populations\n") ;
   }
-  printf("## end of Fst statistics between populations\n") ;
 
   if (fstdetailsname != NULL) {
     fprintf
@@ -2042,7 +2097,7 @@ main (int argc, char **argv)
     openit (outputname, &ofile, "w");
   else
     ofile = stdout;
-  doshrinkp (mmat, nrows, ncols, xindex, xsnplist, xcoeffs);
+  doshrinkp (mmat, nrows, ncols, xindex, xsnplist, xcoeffs, pubcoeffs);
  }
 
    ymem = calcmem(1)/1.0e6 ;
@@ -2094,6 +2149,7 @@ readcommands (int argc, char **argv)
   getstring (ph, "genotypename:", &genotypename);
   getstring (ph, "snpname:", &snpname);
   getstring (ph, "indivname:", &indivname);
+  getstring (ph, "instem:", &instem) ;
   getstring (ph, "poplistname:", &poplistname);
   getstring (ph, "snpeigname:", &snpeigname);
   getstring (ph, "snpweightoutname:", &snpeigname);     /* changed 09/18/07 */
@@ -2110,10 +2166,11 @@ readcommands (int argc, char **argv)
   getstring (ph, "weightname:", &weightname);
   getstring (ph, "fstdetailsname:", &fstdetailsname);
   getint(ph, "fstsnpout:", &fstsnpout) ;
-  getstring (ph, "deletsnpoutname:", &deletesnpoutname);
+  getstring (ph, "deletesnpoutname:", &deletesnpoutname);
   getstring (ph, "topright:", &topright);
   getstring (ph, "elloutname:", &elloutname);
   getstring (ph, "megaoutname:", &megaoutname);
+  getdbl (ph, "megascale:", &megascale);
   getdbl (ph, "ellconf:", &ellconf);
   getint (ph, "numeigs:", &numeigs);
   getint (ph, "maxpops:", &maxpops);
@@ -2139,6 +2196,7 @@ readcommands (int argc, char **argv)
   getint (ph, "noxdata:", &noxdata);
   getint (ph, "inbreed:", &inbreed);
   getint (ph, "easymode:", &easymode);
+  getint (ph, "coredump:", &coredump);
   getint (ph, "printcover:", &printcover);
   getint (ph, "seed:", &t);
   seed = (long) t;
@@ -2164,6 +2222,8 @@ readcommands (int argc, char **argv)
   getint (ph, "minallelecnt:", &minallelecnt);
   getint (ph, "chrom:", &xchrom);
   getint (ph, "nochrom:", &zchrom);
+  getint (ph, "minchrom:", &minchrom);
+  getint (ph, "maxchrom:", &maxchrom);
   getint (ph, "maxmissing:", &maxmissing);
   getint (ph, "lopos:", &lopos);
   getint (ph, "hipos:", &hipos);
@@ -2856,7 +2916,7 @@ dofstxx (double *xfst, double *fstans, double *fstsd, int *fstnum, SNP ** xsnpli
   setblocks (blstart, blsize, &xnblocks, xsnplist, ncols, blgsize);
   fixwt (xsnplist, ncols, 1.0);
 
-  dofstnumx (xfst, fstans, fstsd, fstnum, xsnplist, xindex, xtypes,
+  dofstnumx_eig (xfst, fstans, fstsd, fstnum, xsnplist, xindex, xtypes,
              nrows, ncols, numeg, nblocks, indm, YES);
 
   free (blstart);
@@ -4019,7 +4079,7 @@ doproj (double *regans, int isample, SNP ** xsnplist, double *fxvecs,
 }
 
 void
-doshrinkp2 (double *mmat, int m, int n, int *xindex, SNP ** xsnplist, double *xcoeffs)
+doshrinkp2 (double *mmat, int m, int n, int *xindex, SNP ** xsnplist, double *xcoeffs, double *pubcoeffs)
 // lsq project mode
 // shrink multiple evecs at once
 {
@@ -4198,6 +4258,8 @@ doshrinkp2 (double *mmat, int m, int n, int *xindex, SNP ** xsnplist, double *xc
   printevecs (xsnplist, indivmarkers, indivmarkers,
               numindivs, n, numindivs, numeigs, ss, lambda, ofile);
 
+  copyarr(ss, pubcoeffs, numeigs*numindivs) ;
+
   free (xmat);
   free (evecs);
   free (lambda);
@@ -4220,7 +4282,7 @@ doshrinkp2 (double *mmat, int m, int n, int *xindex, SNP ** xsnplist, double *xc
 }
 
 void
-doshrinkp (double *mmat, int m, int n, int *xindex, SNP ** xsnplist, double *xcoeffs)
+doshrinkp (double *mmat, int m, int n, int *xindex, SNP ** xsnplist, double *xcoeffs, double *pubcoeffs)
 // lsq project mode
 {
   double *mmatt, *xmat, y, yscale;
@@ -4246,7 +4308,7 @@ doshrinkp (double *mmat, int m, int n, int *xindex, SNP ** xsnplist, double *xco
     return;
 
   if (newshrink) { 
-   doshrinkp2(mmat, m, n, xindex, xsnplist, xcoeffs) ;
+   doshrinkp2(mmat, m, n, xindex, xsnplist, xcoeffs, pubcoeffs) ;
    return ; 
   }
   printf ("doshrink called\n");
@@ -4398,6 +4460,7 @@ doshrinkp (double *mmat, int m, int n, int *xindex, SNP ** xsnplist, double *xco
   printevecs (xsnplist, indivmarkers, indivmarkers,
               numindivs, n, numindivs, numeigs, ss, lambda, ofile);
 
+  copyarr(ss, pubcoeffs, numeigs*numindivs) ;
   free (xmat);
   free (evecs);
   free (lambda);
@@ -4448,7 +4511,7 @@ void estrounak(double *edgarw, double *lambdav, int lentop, int lenspec, double 
 
  if (lentop <= 0) return ;
  len = lentop + lenspec ;
- printf("zzz %d %d %9.3f\n", lentop, len, gamm) ; 
+//  printf("zzz %d %d %9.3f\n", lentop, len, gamm) ; 
  ZALLOC(w1, len, double) ; 
  ZALLOC(lam, len, double) ; 
  copyarr(lambdav, lam, len) ;     
@@ -4464,19 +4527,19 @@ spike.est[i]<-samp.eval[i]/(1+(gamma/(p-m))*temp)
   for (i=0; i<lentop; ++i) {  
    ytemp = 0 ; 
    lambda = top[i] ;  
-   jnum = 0 ; 
+
    for (j=lentop; j<len; ++j) { 
      y0  = top[j] / (lambda - top[j]) ; 
 //   printf("zzmul: %4d %12.6f %12.6f %12.6f\n", j, lambda, top[j], y0) ; 
      ytemp += y0 ;
      ++jnum ; 
    } 
-   printf("zzrounak: %d %12.6f %12.6f %12.6f\n", i, top[i] * (double) len, ytemp, yjfac) ;  
+// printf("zzrounak: %d %12.6f %12.6f %12.6f\n", i, top[i] * (double) len, ytemp, yjfac) ;  
 // ytemp is scale invariant 
    y1 = gamm/(double) yjfac ;  
    y1 *= ytemp ;   
    edgarw[i] = y2 = 1.0/(1.0+y1) ; 
-   printf("ytemp y1 y2: %9.3f %9.3f %9.3f\n", ytemp, y1, y2) ; 
+// printf("ytemp y1 y2: %9.3f %9.3f %9.3f\n", ytemp, y1, y2) ; 
 // y2 should be shrinkage factor
   }
 
@@ -4792,7 +4855,7 @@ printmega(char *outname, char **eglist, int numeg, double *fstsc)
  openit(outname, &fff, "w") ; 
 
  fprintf(fff, "#mega\n") ;
- fprintf(fff, "!TITLE distance for %d samples ;", numeg) ; 
+ fprintf(fff, "!TITLE distance for %d samples Fst * %6.0f;", numeg, megascale) ; 
  fprintf(fff, "\n\n") ; 
 
  for (i=0; i<numeg; i++) { 
@@ -4804,7 +4867,7 @@ printmega(char *outname, char **eglist, int numeg, double *fstsc)
   for (j=0; j<i; j++) { 
    y = fstsc[i*numeg+j] ;
    y = MAX(y, 0) ;
-   fprintf(fff, "  %9.6f", y) ;
+   fprintf(fff, "  %9.0f", y*megascale) ;
   } 
   fprintf(fff, "\n") ;
  }

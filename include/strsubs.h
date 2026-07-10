@@ -16,6 +16,7 @@ int isnumword (char *str)  ;
 void ffprint (FILE *fff, char *fmt, ...) ; 
 void enuf( char *fmt, ...) ;
 void fatalx( char *fmt, ...) ;
+void setdump(int cdump) ; 
 int docommand( char *fmt, ...) ;
 long seednum() ;
 void printbl(int n) ;
@@ -31,11 +32,14 @@ int mapstrings(char **pstr, char **insub, char **outsub, int n)  ;
 int upstring (char *ss)  ; 
 int numcols (char *name) ;
 int numlines(char *name) ;
+void openitntry (char *name, FILE ** fff, char *type, int ntry) ;
 int openit_trap (char *name, FILE ** fff, char *type); 
 void openit(char *name, FILE **fff, char *type)  ;
 int  ftest(char *aname) ;
 void fcheckr(char *name) ;
 void fcheckw(char *name) ; 
+int fdescwd() ;
+int getjj(int **xx, int maxrow, int numcol, char *fname) ;
 int getxx(double **xx, int maxrow, int numcol, char *fname) ;
 int getss(char  **ss, char *fname) ;
 int  loadlist(char **list, char *listname)    ;  // with dup check
@@ -65,6 +69,8 @@ void copystrings(char **sa, char **sb, int n) ;
 void printstringsw(char **ss, int n, int slen, int width)  ;
 void printstrings(char **ss, int n)  ;
 void printstringsx(char **ss, int n)  ;
+void printstringsxfile(char **ss, int n, FILE *fff)  ;
+void printstringss(char *sout, char **ss, int n)  ;
 int ridfile(char *fname) ; 
 char compbase(char x) ;
 void mkupper(char *sx) ;
@@ -87,14 +93,26 @@ char *fgetstrap(char *buff, int maxlen, FILE *fff, int *ret)  ;
 char readtonl(FILE *fff) ; 
 int  filehash(char *name) ;
 char *mytemp (char *qqq) ; 
+void randomname(char **ans) ;
+int getchromlist(char **list, char *bamname) ;
+int getreglist (char ***preglist, char *bamname)  ;
 void printslurmenv ()  ; 
 int getfline(char *ss, char *fname, int maxstr) ;
-int copyfs(char *infile, FILE *fff)  ;
+long copyfs(char *infile, FILE *fff)  ;
 int getxxq(double **xx, int maxrow, int numcol, char *fname) ; 
 int numcolsq (char *name) ;
 int getdata(char *buff, int nbytes, char *fname)  ;
 int putdata(char *buff, int nbytes, char *fname)  ;
 void writestrings(char *fname, char **ss, int n)  ;
+int file_exists(const char *filename) ;
+int getlist(char *name, char **list)  ;
+char *runcmd(char *cmd)  ;
+void printcmdline(int argc, char **argv)  ;
+char *strstrr(char *stack, char *needle) ;
+int canwrite(char *fname)  ;
+long numlinesx(char *name)  ;
+int isdata(char *buff, long bufflen) ;
+void mkcmdline(char *ss, char *argv0, char *version) ; 
 
 
 #define ZALLOC(item,n,type)      if ((item = (type *)calloc((n),sizeof(type))) == NULL) \
@@ -112,4 +130,5 @@ void writestrings(char *fname, char **ss, int n)  ;
 #define CNULL  '\0' 
 #define CNL  '\n' 
 #define CTAB  '\t' 
+#define CHASH  '#' 
 
