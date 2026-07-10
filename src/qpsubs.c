@@ -12,7 +12,7 @@ static int jackweight = YES;
 // .05 will trim jackknife stats
 
 static void wjackvestx (double *vest, double *var, int d, double *mean,
-			double **jmean, double *jwt, int g);
+                        double **jmean, double *jwt, int g);
 void printnorm (double *a, int n);
 static int pubjack = NO;
 static void calcndinbreed (int *c1, int *c2, double *pen, double *ped);
@@ -112,7 +112,7 @@ settsc (int tpat[3][4], double tscore[3], int rpat[3][4], double rscore[3])
   copyarr (ww, w2, 3);
   vst (ww, ww, -1.0, 3);
   sortit (w2, indx, 3);
-  y = w2[1];			// second best score
+  y = w2[1];                    // second best score
   vsp (ww, ww, y, 3);
 
   for (i = 0; i < 3; i++) {
@@ -126,7 +126,7 @@ settsc (int tpat[3][4], double tscore[3], int rpat[3][4], double rscore[3])
 
 void
 getpdata (int *rawcol, double *pm, double *pn, int *xtypes, int nrows,
-	  int numeg)
+          int numeg)
 {
   int *ytypes, n = 0;
   int i, k, t, g;
@@ -188,7 +188,7 @@ getpdata (int *rawcol, double *pm, double *pn, int *xtypes, int nrows,
 
 void
 gethscore (double *hscore, double *scores,
-	   int a, int b, int c, int d, int numeg)
+           int a, int b, int c, int d, int numeg)
 {
   hscore[0] = qhdiff (scores, a, b, c, d, numeg);
   hscore[1] = qhdiff (scores, a, b, c, d, numeg);
@@ -197,8 +197,8 @@ gethscore (double *hscore, double *scores,
 
 void
 getrscore (double *rscore, double *rho, double **zz,
-	   int ncols, int a, int b, int c, int d, int numeg, int *blabels,
-	   int nblocks)
+           int ncols, int a, int b, int c, int d, int numeg, int *blabels,
+           int nblocks)
 {
   rscore[0] = qcorr (zz, &rho[0], ncols, a, b, c, d, numeg, blabels, nblocks);
   rscore[1] = qcorr (zz, &rho[1], ncols, a, c, b, d, numeg, blabels, nblocks);
@@ -242,7 +242,7 @@ qcorr (double **zz, double *rho, int ncols, int a, int b, int c, int d,
 
 int
 loadindx (Indiv ** xindlist, int *xindex, Indiv ** indivmarkers,
-	  int numindivs)
+          int numindivs)
 {
   int i, n = 0;
   Indiv *indx;
@@ -263,7 +263,7 @@ loadindx (Indiv ** xindlist, int *xindex, Indiv ** indivmarkers,
 
 int
 loadsnpx (SNP ** xsnplist, SNP ** snpmarkers, int numsnps,
-	  Indiv ** indivmarkers)
+          Indiv ** indivmarkers)
 {
   int i, n = 0;
   SNP *cupt;
@@ -368,7 +368,7 @@ getrawcolx (int **cc, SNP * cupt, int *xindex, int nrows, Indiv ** indm)
 
 void
 getcolx (double *xcol, SNP * cupt, int *xindex, int nrows, int col,
-	 double *xmean, double *xfancy)
+         double *xmean, double *xfancy)
 // side effect set xmean xfancy
 {
   Indiv *indx;
@@ -385,7 +385,7 @@ getcolx (double *xcol, SNP * cupt, int *xindex, int nrows, int col,
 
   vadjust (xcol, nrows, &pmean);
   if (fancynorm) {
-    p = 0.5 * pmean;		// autosomes
+    p = 0.5 * pmean;            // autosomes
     y = p * (1.0 - p);
     if (y <= 0.0)
       return;
@@ -517,7 +517,7 @@ calcmean (double *wmean, double *vec, int len, int *xtypes, int numeg)
   ZALLOC (w0, len, double);
   ZALLOC (popsize, numeg, double);
 
-  y1 = asum (vec, len) / (double) len;	// mean
+  y1 = asum (vec, len) / (double) len;  // mean
   vsp (w0, vec, -y1, len);
 
   for (i = 0; i < len; i++) {
@@ -552,10 +552,10 @@ setmiss (SNP ** snpm, int numsnps)
     tot = 0;
     for (j = 0; j < n; j++) {
       if (getgtypes (cupt, j) >= 0) {
-	t = 1;
+        t = 1;
       }
       else {
-	t = 0;
+        t = 0;
       }
       putgtypes (cupt, j, t);
       tot += t;
@@ -671,7 +671,7 @@ countpopsr (int ***counts, SNP ** xsnplist, int *xindex, int *xtypes,
 
 void
 countpops (int ***counts, SNP ** xsnplist, int *xindex, int *xtypes,
-	   int nrows, int ncols)
+           int nrows, int ncols)
 // countpops is int [ncols][npops][2]  
 {
   int col, i, g1, g2, g, k1;
@@ -686,21 +686,21 @@ countpops (int ***counts, SNP ** xsnplist, int *xindex, int *xtypes,
       g = rawcol[i];
       k1 = xtypes[i];
       if (k1 < 0)
-	continue;
+        continue;
       if (g < 0)
-	continue;
+        continue;
       g1 = 0;
       if (g > 0)
-	g1 = 1;
+        g1 = 1;
       g2 = g - g1;
       if (g1 < 0)
-	fatalx ("bug\n");
+        fatalx ("bug\n");
       if (g2 < 0)
-	fatalx ("bug\n");
+        fatalx ("bug\n");
       if (g1 > 1)
-	fatalx ("bug\n");
+        fatalx ("bug\n");
       if (g2 > 1)
-	fatalx ("bug\n");
+        fatalx ("bug\n");
       ++counts[col][k1][g1];
       ++counts[col][k1][g2];
     }
@@ -816,7 +816,7 @@ symit (double *X, int n)
 
 double
 divcol (double *estn, double *estd, SNP * cupt,
-	int *xindex, int *xtypes, int nrows, int type1, int type2)
+        int *xindex, int *xtypes, int nrows, int type1, int type2)
 /* heterozygosity for 2 pops */
 {
   int c1[2], c2[2], *cc;
@@ -857,7 +857,7 @@ divcol (double *estn, double *estd, SNP * cupt,
   zz = yaa + ybb;
   if ((z < 0.1) || (zz < 0.1)) {
     *estn = 0.0;
-    *estd = -1.0;		/* no data */
+    *estd = -1.0;               /* no data */
     free (rawcol);
     return 0.0;
   }
@@ -1330,7 +1330,7 @@ f4y (double *estn, SNP * cupt,
 
 void
 fstcolyy (double *estnmat, double *estdmat, SNP * cupt,
-	  int *xindex, int *xtypes, int nrows, int numeg)
+          int *xindex, int *xtypes, int nrows, int numeg)
 /**
   NP style n, d estimation for fst No ascertainment  
  like fstcoly but a matrix of populations so data is only accessed once 
@@ -1369,7 +1369,7 @@ fstcolyy (double *estnmat, double *estdmat, SNP * cupt,
       if (hest[i] < -100.0)
 	continue;
       if (hest[j] < -100.0)
-	continue;
+        continue;
       ya = aafreq[i];
       yb = aafreq[j];
       en = (ya - yb) * (ya - yb);
@@ -1378,7 +1378,7 @@ fstcolyy (double *estnmat, double *estdmat, SNP * cupt,
       ed = en + hest[i] + hest[j];
 
       if (ed < 0.0)
-	fatalx ("logic bug\n");
+        fatalx ("logic bug\n");
       estnmat[i * numeg + j] = estnmat[j * numeg + i] = en * ywt;
       estdmat[i * numeg + j] = estdmat[j * numeg + i] = ed * ywt;
     }
@@ -1390,7 +1390,7 @@ fstcolyy (double *estnmat, double *estdmat, SNP * cupt,
 
 double
 fstcoly (double *estn, double *estd, SNP * cupt,
-	 int *xindex, int *xtypes, int nrows, int type1, int type2)
+         int *xindex, int *xtypes, int nrows, int type1, int type2)
 /** NP style n, d estimation for fst No ascertainment  */
 {
   int c1[2], c2[2], *cc;
@@ -1454,19 +1454,19 @@ fstcoly (double *estn, double *estd, SNP * cupt,
   z = ya + yb;
   if ((z < 1.5) || (zz < 1.5)) {
     *estn = 0.0;
-    *estd = -1.0;		/* no data in column */
+    *estd = -1.0;               /* no data in column */
     free2Dint (&ccc, nrows);
     return 0.0;
   }
 
-  ywt = ya * yb / (z * (z - 1.0));	// z must be at least 2 
+  ywt = ya * yb / (z * (z - 1.0));      // z must be at least 2 
   ywt = 1.0;
 
   z = ya + yb;
 
   yt = ya + yb;
   p1 = ya / yt;
-  h1 = ya * yb / (yt * (yt - 1.0));	// 2 h1 is heterozygosity
+  h1 = ya * yb / (yt * (yt - 1.0));     // 2 h1 is heterozygosity
 
   yt = yaa + ybb;
   p2 = yaa / yt;
@@ -1532,10 +1532,10 @@ dohzg (double *top, double *bot, SNP ** xsnplist, int *xindex, int *xtypes,
       k = xtypes[i];
       g = rawcol[i];
       if (g < 0)
-	continue;
+        continue;
       pop1[k] += g;
       pop0[k] += 2 - g;
-      popall[k] += 2;		// code needs chamging for X  
+      popall[k] += 2;           // code needs chamging for X  
     }
     for (k = 0; k < numeg; k++) {
       ya = pop0[k];
@@ -1544,20 +1544,20 @@ dohzg (double *top, double *bot, SNP ** xsnplist, int *xindex, int *xtypes,
       y = ya + yb;
       bot[k * numeg + k] += y * (y - 1.0);
       for (j = k + 1; j < numeg; j++) {
-	ya = pop0[j];
-	yb = pop1[k];
-	y = ya + yb;
-	top[k * numeg + j] += ya * yb;
-	ya = pop1[j];
-	yb = pop0[k];
-	top[j * numeg + k] = top[k * numeg + j] += ya * yb;
+        ya = pop0[j];
+        yb = pop1[k];
+        y = ya + yb;
+        top[k * numeg + j] += ya * yb;
+        ya = pop1[j];
+        yb = pop0[k];
+        top[j * numeg + k] = top[k * numeg + j] += ya * yb;
 
-	ya = popall[k];
-	yb = popall[j];
-	bot[k * numeg + j] += ya * yb;
+        ya = popall[k];
+        yb = popall[j];
+        bot[k * numeg + j] += ya * yb;
 
-	top[j * numeg + k] = top[k * numeg + j];
-	bot[j * numeg + k] = bot[k * numeg + j];
+        top[j * numeg + k] = top[k * numeg + j];
+        bot[j * numeg + k] = bot[k * numeg + j];
       }
     }
   }
@@ -1662,7 +1662,7 @@ setblocksz (int **pblock, int **pbsize, SNP ** snpm, int numsnps,
   
 void
 setblocks (int *block, int *bsize, int *nblock, SNP ** snpm, int numsnps,
-	   double blocklen)
+           double blocklen)
 // block, bsize are first element and block length 
 // must have been allocated if not NULL 
 {
@@ -1688,11 +1688,11 @@ setblocks (int *block, int *bsize, int *nblock, SNP ** snpm, int numsnps,
     dis = gpos - fpos;
     if ((chrom != lchrom) || (dis >= blocklen)) {
       if (xsize > 0) {
-	if (block != NULL)
-	  block[n] = olds;
-	if (bsize != NULL)
-	  bsize[n] = xsize;
-	++n;
+        if (block != NULL)
+          block[n] = olds;
+        if (bsize != NULL)
+          bsize[n] = xsize;
+        ++n;
       }
       lchrom = chrom;
       fpos = gpos;
@@ -1725,7 +1725,7 @@ numblocks (SNP ** snpm, int numsnps, double blocklen)
 
 void
 corrwjack (double *xrho, double *xsig, double *z1, double *z2, int ncols,
-	   int *bcols, int nblocks)
+           int *bcols, int nblocks)
 {
   double *gdot, *dot, *wdot;
   double **bdot;
@@ -1832,8 +1832,8 @@ setbcols (SNP ** xsnplist, int ncols, int *bcols)
 
 double
 doadmlin (double *jest, double *jsig, double *zlin, double *var,
-	  SNP ** xsnplist, int *xindex, int *xtypes, int nrows, int ncols,
-	  int numeg, int nblocks, double scale, Indiv ** indm)
+          SNP ** xsnplist, int *xindex, int *xtypes, int nrows, int ncols,
+          int numeg, int nblocks, double scale, Indiv ** indm)
 {
 
   int t1, t2, kret;
@@ -1879,7 +1879,7 @@ doadmlin (double *jest, double *jsig, double *zlin, double *var,
   ZALLOC (vmean, numeg, double);
 
   zl = w1;
-  rhs = w2;			// overloading
+  rhs = w2;                     // overloading
 
   for (col = 0; col < ncols; ++col) {
     cupt = xsnplist[col];
@@ -1935,7 +1935,7 @@ doadmlin (double *jest, double *jsig, double *zlin, double *var,
 
   ytop = ybot = errest = 0.0;
 
-  vvd (wtop, gtop, gbot, ng3);	// delete-block estimate
+  vvd (wtop, gtop, gbot, ng3);  // delete-block estimate
 
   for (k = 0; k < nblocks; k++) {
     top = btop[k];
@@ -1943,7 +1943,7 @@ doadmlin (double *jest, double *jsig, double *zlin, double *var,
     vvm (wtop, gtop, top, ng3);
     vvm (wbot, gbot, bot, ng3);
     vsp (wbot, wbot, 1.0e-10, ng3);
-    vvd (wtop, wtop, wbot, ng3);	// delete-block estimate
+    vvd (wtop, wtop, wbot, ng3);        // delete-block estimate
     vzero (zl, numeg);
     djack[k] = estmix (zl + 1, wtop, numeg);
     copyarr (zl + 1, vjmean[k], d);
@@ -2066,7 +2066,7 @@ dof3 (double *f3, double *f3sig, SNP ** xsnplist, int *xindex, int *xtypes,
     vvm (wtop, gtop, top, ng3);
     vvm (wbot, gbot, bot, ng3);
     vsp (wbot, wbot, 1.0e-10, ng3);
-    vvd (top, wtop, wbot, ng3);	// delete-block estimate
+    vvd (top, wtop, wbot, ng3); // delete-block estimate
   }
   vsp (gbot, gbot, 1.0e-10, ng3);
   vvd (gtop, gtop, gbot, ng3);
@@ -2075,21 +2075,21 @@ dof3 (double *f3, double *f3sig, SNP ** xsnplist, int *xindex, int *xtypes,
   for (a = 0; a < numeg; a++) {
     for (b = 0; b < numeg; b++) {
       for (c = 0; c < numeg; c++) {
-	if (a == b)
-	  continue;
-	if (a == c)
-	  continue;
-	if (c < b)
-	  continue;
-	for (k = 0; k < nblocks; k++) {
-	  top = btop[k];
-	  djack[k] = dump3 (top, a, b, c, numeg);
-	}
+        if (a == b)
+          continue;
+        if (a == c)
+          continue;
+        if (c < b)
+          continue;
+        for (k = 0; k < nblocks; k++) {
+          top = btop[k];
+          djack[k] = dump3 (top, a, b, c, numeg);
+        }
 
-	mean = dump3 (gtop, a, b, c, numeg);
-	wjackest (&jest, &jsig, mean, djack, wjack, nblocks);
-	bump3 (f3sig, a, b, c, numeg, jsig);
-	bump3 (f3sig, a, c, b, numeg, jsig);
+        mean = dump3 (gtop, a, b, c, numeg);
+        wjackest (&jest, &jsig, mean, djack, wjack, nblocks);
+        bump3 (f3sig, a, b, c, numeg, jsig);
+        bump3 (f3sig, a, c, b, numeg, jsig);
       }
     }
   }
@@ -2216,30 +2216,30 @@ dof4 (double *f4, double *f4sig, SNP ** xsnplist, int *xindex, int *xtypes,
 
     for (a = 0; a < numeg; a++) {
       for (b = 0; b < numeg; b++) {
-	for (c = 0; c < numeg; c++) {
-	  for (d = 0; d < numeg; d++) {
+        for (c = 0; c < numeg; c++) {
+          for (d = 0; d < numeg; d++) {
 
-	    if (a == b)
-	      continue;
-	    if (a == c)
-	      continue;
-	    if (a == d)
-	      continue;
-	    if (b == c)
-	      continue;
-	    if (b == d)
-	      continue;
-	    if (c == d)
-	      continue;
+            if (a == b)
+              continue;
+            if (a == c)
+              continue;
+            if (a == d)
+              continue;
+            if (b == c)
+              continue;
+            if (b == d)
+              continue;
+            if (c == d)
+              continue;
 
-	    if (b < a)
-	      continue;
-	    if (c < a)
-	      continue;
-	    if (d < a)
-	      continue;
-	    if (d < c)
-	      continue;
+            if (b < a)
+              continue;
+            if (c < a)
+              continue;
+            if (d < a)
+              continue;
+            if (d < c)
+              continue;
 
 //     f4y(&ytop,  cupt, xindex, xtypes, nrows, a, b, c, d) ;
 	    if (aafreq[a] < -1.0)
@@ -2252,26 +2252,26 @@ dof4 (double *f4, double *f4sig, SNP ** xsnplist, int *xindex, int *xtypes,
 	      continue;
 	    ytop = (aafreq[a] - aafreq[b]) * (aafreq[c] - aafreq[d]);
 
-	    ++nloop;
-	    //  if (nloop<100) printf("zz1 %d %d %d %d %9.3f\n", a, b, c, d, ytop)  ;
-	    if (isnan (ytop))
-	      fatalx ("zznan\n");
+            ++nloop;
+            //  if (nloop<100) printf("zz1 %d %d %d %d %9.3f\n", a, b, c, d, ytop)  ;
+            if (isnan (ytop))
+              fatalx ("zznan\n");
 
-	    if (mode != 2) {
-	      bump4x (top, a, b, c, d, numeg, wt * ytop);
-	      bump4x (top, b, a, c, d, numeg, -wt * ytop);
-	      bump4x (bot, a, b, c, d, numeg, 1.0);
-	      bump4x (bot, b, a, c, d, numeg, 1.0);
-	    }
-	    else {
-	      bump4x (top, a, b, c, d, numeg, ytop);
-	      bump4x (top, b, a, c, d, numeg, -ytop);
-	      bump4x (bot, a, b, c, d, numeg, 1.0 / wt);
-	      bump4x (bot, b, a, c, d, numeg, 1.0 / wt);
-	    }
+            if (mode != 2) {
+              bump4x (top, a, b, c, d, numeg, wt * ytop);
+              bump4x (top, b, a, c, d, numeg, -wt * ytop);
+              bump4x (bot, a, b, c, d, numeg, 1.0);
+              bump4x (bot, b, a, c, d, numeg, 1.0);
+            }
+            else {
+              bump4x (top, a, b, c, d, numeg, ytop);
+              bump4x (top, b, a, c, d, numeg, -ytop);
+              bump4x (bot, a, b, c, d, numeg, 1.0 / wt);
+              bump4x (bot, b, a, c, d, numeg, 1.0 / wt);
+            }
 
-	  }
-	}
+          }
+        }
       }
     }
   }
@@ -2280,42 +2280,42 @@ dof4 (double *f4, double *f4sig, SNP ** xsnplist, int *xindex, int *xtypes,
   for (a = 0; a < numeg; a++) {
     for (b = 0; b < numeg; b++) {
       for (c = 0; c < numeg; c++) {
-	for (d = 0; d < numeg; d++) {
-	  if (a == b)
-	    continue;
-	  if (a == c)
-	    continue;
-	  if (a == d)
-	    continue;
-	  if (b == c)
-	    continue;
-	  if (b == d)
-	    continue;
-	  if (c == d)
-	    continue;
+        for (d = 0; d < numeg; d++) {
+          if (a == b)
+            continue;
+          if (a == c)
+            continue;
+          if (a == d)
+            continue;
+          if (b == c)
+            continue;
+          if (b == d)
+            continue;
+          if (c == d)
+            continue;
 
-	  if (b < a)
-	    continue;
-	  if (c < a)
-	    continue;
-	  if (d < a)
-	    continue;
-	  if (d < c)
-	    continue;
+          if (b < a)
+            continue;
+          if (c < a)
+            continue;
+          if (d < a)
+            continue;
+          if (d < c)
+            continue;
 
-	  for (k = 0; k < nblocks; k++) {
-	    top = btop[k];
+          for (k = 0; k < nblocks; k++) {
+            top = btop[k];
 	    bot = bbot[k];
 	    xtop[k] = dump4 (top, a, b, c, d, numeg);
 	    xbot[k] = dump4 (bot, a, b, c, d, numeg);
-	  }
+          }
 
 	  estjackq (&jest, &jsig, xtop, xbot, wjack, nblocks);
 	  set4x (f4sig, a, b, c, d, numeg, jsig);
 	  set4x (f4sig, b, a, c, d, numeg, jsig);
 	  set4x (f4, a, b, c, d, numeg, jest);
 	  set4x (f4, b, a, c, d, numeg, jest);
-	}
+        }
       }
     }
   }
@@ -2465,8 +2465,8 @@ map4x (double *aa, double *bb, int n2, int *indx)
 
 double
 dofstnumx (double *fst, double *fstest, double *fstsig, SNP ** xsnplist,
-	   int *xindex, int *xtypes, int nrows, int ncols, int numeg,
-	   int nblocks, Indiv ** indivmarkers, int fstmode)
+           int *xindex, int *xtypes, int nrows, int ncols, int numeg,
+           int nblocks, Indiv ** indivmarkers, int fstmode)
 // fstmode is classic mode (smartpca)
 // fstmode 2  is fstdmode
 {
@@ -2542,49 +2542,49 @@ dofstnumx (double *fst, double *fstest, double *fstsig, SNP ** xsnplist,
 
     for (a = 0; a < numeg; a++) {
       for (b = a + 1; b < numeg; b++) {
-	k = a * numeg + b;
-	ytop = ztop[k];
-	ybot = zbot[k];
+        k = a * numeg + b;
+        ytop = ztop[k];
+        ybot = zbot[k];
 	if (fstdetails != NULL) {
-	  if (fstdnum == 0) {
+          if (fstdnum == 0) {
 	    fprintf (fstdetails, "%15s ", "## pop 1");
 	    fprintf (fstdetails, "%15s ", "pop 2");
 	    fprintf (fstdetails, "%15s ", "snpname");
 	    fprintf (fstdetails, "%12s ", "N");
 	    fprintf (fstdetails, "%12s ", "D");
-	    fprintf (fstdetails, "\n");
-	  }
+            fprintf (fstdetails, "\n");
+          }
 	  fprintf (fstdetails, "%15s ", eglist[a]);
 	  fprintf (fstdetails, "%15s ", eglist[b]);
 	  fprintf (fstdetails, "%15s ", cupt->ID);
-	  fprintf (fstdetails, "%12.6f ", ytop);
-	  fprintf (fstdetails, "%12.6f ", ybot);
-	  fprintf (fstdetails, "\n");
-	  ++fstdnum;
-	}
+          fprintf (fstdetails, "%12.6f ", ytop);
+          fprintf (fstdetails, "%12.6f ", ybot);
+          fprintf (fstdetails, "\n");
+          ++fstdnum;
+        }
 
 
-	if (ybot < 0.0)
-	  continue;
+        if (ybot < 0.0)
+          continue;
 
 
-	if (fstmode == NO) {
-	  top[k] += wt * ytop;
-	  bot[k] += 1.0;
-	}
+        if (fstmode == NO) {
+          top[k] += wt * ytop;
+          bot[k] += 1.0;
+        }
 
-	if (fstmode == YES) {
-	  top[k] += ytop;
-	  bot[k] += ybot;
-	}
+        if (fstmode == YES) {
+          top[k] += ytop;
+          bot[k] += ybot;
+        }
 
-	if (fstmode == 2) {
-	  top[k] += ytop;
-	  bot[k] += 1.0 / wt;
-	}
+        if (fstmode == 2) {
+          top[k] += ytop;
+          bot[k] += 1.0 / wt;
+        }
 
-	w1[k] += ytop;
-	w2[k] += ybot;
+        w1[k] += ytop;
+        w2[k] += ybot;
 // classic fst estimate
 
       }
@@ -2619,7 +2619,7 @@ dofstnumx (double *fst, double *fstest, double *fstsig, SNP ** xsnplist,
     vvm (wtop, gtop, top, numeg * numeg);
     vvm (wbot, gbot, bot, numeg * numeg);
     vsp (wbot, wbot, 1.0e-10, numeg * numeg);
-    vvd (top, wtop, wbot, numeg * numeg);	// delete-block estimate
+    vvd (top, wtop, wbot, numeg * numeg);       // delete-block estimate
   }
   vsp (gbot, gbot, 1.0e-10, numeg * numeg);
   vvd (gtop, gtop, gbot, numeg * numeg);
@@ -2628,8 +2628,8 @@ dofstnumx (double *fst, double *fstest, double *fstsig, SNP ** xsnplist,
   for (i = 0; i < numeg; i++) {
     for (j = i + 1; j < numeg; j++) {
       for (k = 0; k < nblocks; k++) {
-	top = btop[k];
-	djack[k] = top[i * numeg + j];
+        top = btop[k];
+        djack[k] = top[i * numeg + j];
       }
 
       ++nloop;
@@ -2640,10 +2640,10 @@ dofstnumx (double *fst, double *fstest, double *fstsig, SNP ** xsnplist,
 
       if (nloop == -1) {
 	printf ("ddd\n");
-	printf ("mean: %9.3f\n", mean);
-	printmat (djack, 1, nblocks);
-	printmat (wjack, 1, nblocks);
-	printf ("%9.3f %9.3f\n", jest, jsig);
+        printf ("mean: %9.3f\n", mean);
+        printmat (djack, 1, nblocks);
+        printmat (wjack, 1, nblocks);
+        printf ("%9.3f %9.3f\n", jest, jsig);
       }
     }
   }
@@ -2695,12 +2695,12 @@ dofstnumx (double *fst, double *fstest, double *fstsig, SNP ** xsnplist,
 
 double
 dofstnum (double *fst, double *fstest, double *fstsig, SNP ** xsnplist,
-	  int *xindex, int *xtypes, int nrows, int ncols, int numeg,
-	  int nblocks)
+          int *xindex, int *xtypes, int nrows, int ncols, int numeg,
+          int nblocks)
 {
 
   return dofstnumx (fst, fstest, fstsig, xsnplist, xindex, xtypes, nrows, ncols,
-	     numeg, nblocks, NULL, NO);
+             numeg, nblocks, NULL, NO);
 
 }
 
@@ -2753,7 +2753,7 @@ setjquart (int pjack, int jackw, double qq)
 
 void
 wjackest (double *est, double *sig, double mean, double *jmean, double *jwt,
-	  int g)
+          int g)
 // test for jwt 0 
 {
 
@@ -2763,7 +2763,7 @@ wjackest (double *est, double *sig, double mean, double *jmean, double *jwt,
 
 void
 ndfst5 (double *zzest, double *zzsig, double **zn, double **zd, int ncols,
-	int *bcols, int nblocks)
+        int *bcols, int nblocks)
 {
 #define NPAR  5
   double *djack, *wjack;
@@ -2796,9 +2796,9 @@ ndfst5 (double *zzest, double *zzsig, double **zn, double **zd, int ncols,
     ++wjack[bnum];
     for (a = 0; a < 4; a++) {
       for (b = a + 1; b < 4; b++) {
-	c = 4 * a + b;
-	xn[bnum][c] += zn[i][c];
-	xd[bnum][c] += zd[i][c];
+        c = 4 * a + b;
+        xn[bnum][c] += zn[i][c];
+        xd[bnum][c] += zd[i][c];
       }
     }
   }
@@ -2961,12 +2961,12 @@ setwt (SNP ** snpmarkers, int numsnps, Indiv ** indivmarkers, int nrows,
       a = xtypes[k];
 
       if (a < 0)
-	continue;
+        continue;
       if (a >= maxeg)
-	continue;
+        continue;
       g = ccc[k][0];
       if (g < 0)
-	continue;
+        continue;
       cc = ccx[a];
       ivvp (cc, cc, ccc[k], 2);
     }
@@ -2974,8 +2974,8 @@ setwt (SNP ** snpmarkers, int numsnps, Indiv ** indivmarkers, int nrows,
     if (outnum < 0) {
       a0 = a1 = 0;
       for (j = 0; j < numeg; ++j) {
-	a0 += ccx[j][0];
-	a1 += ccx[j][1];
+        a0 += ccx[j][0];
+        a1 += ccx[j][1];
       }
     }
 
@@ -3000,11 +3000,11 @@ setwt (SNP ** snpmarkers, int numsnps, Indiv ** indivmarkers, int nrows,
       aa = a0 + a1;
 
       if ((allsnpsmode == NO) && (aa < 2)) {
-	wt = 0;
-	break;
+        wt = 0;
+        break;
       }
       if (k < numeg)
-	continue;
+        continue;
     }
     cupt->weight = wt;
   }
@@ -3045,8 +3045,8 @@ countg (int *rawcol, int **cc, int *xtypes, int n, int ntypes)
 
 void
 dohzgjack (double *hest, double *hsig, SNP ** xsnplist, int *xindex,
-	   int *xtypes, int nrows, int ncols, int numeg, int *bcols,
-	   int nblocks)
+           int *xtypes, int nrows, int ncols, int numeg, int *bcols,
+           int nblocks)
 {
 
   int t1, t2;
@@ -3091,15 +3091,15 @@ dohzgjack (double *hest, double *hsig, SNP ** xsnplist, int *xindex,
     for (i = 0; i < nrows; i++) {
       k = xtypes[i];
       if (k < 0)
-	continue;
+        continue;
       if (k >= numeg)
-	continue;
+        continue;
       g = rawcol[i];
       if (g < 0)
-	continue;
+        continue;
       pop1[k] += g;
       pop0[k] += 2 - g;
-      popall[k] += 2;		// code needs chamging for X  
+      popall[k] += 2;           // code needs chamging for X  
     }
     for (k = 0; k < numeg; k++) {
       ya = pop0[k];
@@ -3108,20 +3108,20 @@ dohzgjack (double *hest, double *hsig, SNP ** xsnplist, int *xindex,
       y = ya + yb;
       bot[k * numeg + k] += y * (y - 1.0);
       for (j = k + 1; j < numeg; j++) {
-	ya = pop0[j];
-	yb = pop1[k];
-	y = ya + yb;
-	top[k * numeg + j] += ya * yb;
-	ya = pop1[j];
-	yb = pop0[k];
-	top[j * numeg + k] = top[k * numeg + j] += ya * yb;
+        ya = pop0[j];
+        yb = pop1[k];
+        y = ya + yb;
+        top[k * numeg + j] += ya * yb;
+        ya = pop1[j];
+        yb = pop0[k];
+        top[j * numeg + k] = top[k * numeg + j] += ya * yb;
 
-	ya = popall[k];
-	yb = popall[j];
-	bot[k * numeg + j] += ya * yb;
+        ya = popall[k];
+        yb = popall[j];
+        bot[k * numeg + j] += ya * yb;
 
-	top[j * numeg + k] = top[k * numeg + j];
-	bot[j * numeg + k] = bot[k * numeg + j];
+        top[j * numeg + k] = top[k * numeg + j];
+        bot[j * numeg + k] = bot[k * numeg + j];
       }
     }
   }
@@ -3145,15 +3145,15 @@ dohzgjack (double *hest, double *hsig, SNP ** xsnplist, int *xindex,
     vvm (wtop, gtop, top, numeg * numeg);
     vvm (wbot, gbot, bot, numeg * numeg);
     vsp (wbot, wbot, 1.0e-10, numeg * numeg);
-    vvd (top, wtop, wbot, numeg * numeg);	// delete-block estimate
+    vvd (top, wtop, wbot, numeg * numeg);       // delete-block estimate
   }
   vsp (gbot, gbot, 1.0e-10, numeg * numeg);
   vvd (gtop, gtop, gbot, numeg * numeg);
   for (i = 0; i < numeg; i++) {
     for (j = i; j < numeg; j++) {
       for (k = 0; k < nblocks; k++) {
-	top = btop[k];
-	djack[k] = top[i * numeg + j];
+        top = btop[k];
+        djack[k] = top[i * numeg + j];
       }
 
       mean = gtop[i * numeg + j];
@@ -3182,7 +3182,7 @@ dohzgjack (double *hest, double *hsig, SNP ** xsnplist, int *xindex,
 
 void
 wjackvest (double *vest, double *var, int d, double *mean, double **jmean,
-	   double *jwt, int g)
+           double *jwt, int g)
 // test for jwt 0 
 {
   double **jjmean, *jjwt;
@@ -3213,7 +3213,7 @@ wjackvest (double *vest, double *var, int d, double *mean, double **jmean,
 
 static void
 wjackvestx (double *vest, double *var, int d, double *mean, double **jmean,
-	    double *jwt, int g)
+            double *jwt, int g)
 // weighted jackknife see wjack.tex
 // mean is natural estimate.  jmean[k] mean with block k removed.  jwt is weight for block (sample size)
 /** 
@@ -3317,12 +3317,12 @@ f3yyx (double *estmat, SNP * cupt,
     }
     for (b = 0; b < numeg; b++) {
       for (c = 0; c < numeg; c++) {
-	if (a == b)
-	  continue;
-	if (a == c)
-	  continue;
-	if (c < b)
-	  continue;
+        if (a == b)
+          continue;
+        if (a == c)
+          continue;
+        if (c < b)
+          continue;
 
 	p1 = aafreq[a];
 	h1 = hest[a];
@@ -3357,11 +3357,11 @@ f3yyx (double *estmat, SNP * cupt,
 
 	if (b == c) {
 	  en += ax2;
-	}
+        }
 
-	bump3 (estmat, a, b, c, numeg, en);
-	if (b != c)
-	  bump3 (estmat, a, c, b, numeg, en);
+        bump3 (estmat, a, b, c, numeg, en);
+        if (b != c)
+          bump3 (estmat, a, c, b, numeg, en);
 	t = a * numeg * numeg + b * numeg + c;
 	if ((t == 18) && (ncall <= -1)) {
 	  printf ("%9.3f ", p1);
@@ -3432,47 +3432,47 @@ f3yy (double *estmat, SNP * cupt,
   for (a = 0; a < numeg; a++) {
     for (b = 0; b < numeg; b++) {
       for (c = 0; c < numeg; c++) {
-	if (a == b)
-	  continue;
-	if (a == c)
-	  continue;
-	if (c < b)
-	  continue;
+        if (a == b)
+          continue;
+        if (a == c)
+          continue;
+        if (c < b)
+          continue;
 
-	c1 = ccx[a];
-	c2 = ccx[b];
-	c3 = ccx[c];
+        c1 = ccx[a];
+        c2 = ccx[b];
+        c3 = ccx[c];
 
-	ya = (double) c1[0];
-	yb = (double) c1[1];
-	z = ya + yb;
+        ya = (double) c1[0];
+        yb = (double) c1[1];
+        z = ya + yb;
 
 
-	yt = ya + yb;
-	p1 = ya / yt;
-	h1 = ya * yb / (yt * (yt - 1.0));
+        yt = ya + yb;
+        p1 = ya / yt;
+        h1 = ya * yb / (yt * (yt - 1.0));
 
-	yaa = (double) c2[0];
-	ybb = (double) c2[1];
-	yt = yaa + ybb;
-	p2 = yaa / yt;
-	h2 = yaa * ybb / (yt * (yt - 1.0));
-	zz = yaa + ybb;
+        yaa = (double) c2[0];
+        ybb = (double) c2[1];
+        yt = yaa + ybb;
+        p2 = yaa / yt;
+        h2 = yaa * ybb / (yt * (yt - 1.0));
+        zz = yaa + ybb;
 
-	yaa = (double) c3[0];
-	ybb = (double) c3[1];
-	yt = yaa + ybb;
-	p3 = yaa / yt;
+        yaa = (double) c3[0];
+        ybb = (double) c3[1];
+        yt = yaa + ybb;
+        p3 = yaa / yt;
 
-	en = (p1 - p2) * (p1 - p3);
-	en -= h1 / z;
+        en = (p1 - p2) * (p1 - p3);
+        en -= h1 / z;
 
-	if (b == c)
-	  en -= h2 / zz;
+        if (b == c)
+          en -= h2 / zz;
 
-	bump3 (estmat, a, b, c, numeg, en);
-	if (b != c)
-	  bump3 (estmat, a, c, b, numeg, en);
+        bump3 (estmat, a, b, c, numeg, en);
+        if (b != c)
+          bump3 (estmat, a, c, b, numeg, en);
       }
     }
   }
@@ -3955,7 +3955,7 @@ calchetinbreed (int *c1, double *phet, double *phetin)
   h1 = x0 * x2 + (x0 + x2) * x1 / 2 + x1 * (x1 - 1) / 4;
   h1 /= (double) (s * (s - 1));
   *phet = 2 * h1;
-  *phetin = x1 / (double) s;	//naive estimate, unbiased
+  *phetin = x1 / (double) s;    //naive estimate, unbiased
 }
 
 void

@@ -2,7 +2,7 @@
 
 extern int verbose;
 void squishx (double *xmat, double *mat, int nrow, int oldc, int *cols,
-	      int newc);
+              int newc);
 
 double
 regressit (double *ans, double *eq, double *rhs, int m, int n)
@@ -22,7 +22,7 @@ regressit (double *ans, double *eq, double *rhs, int m, int n)
     for (j = 0; j < n; j++) {
       rr[j] += eq[i * n + j] * rhs[i];
       for (k = j; k < n; k++) {
-	co[j * n + k] = co[k * n + j] += eq[i * n + j] * eq[i * n + k];
+        co[j * n + k] = co[k * n + j] += eq[i * n + j] * eq[i * n + k];
       }
     }
   }
@@ -109,21 +109,21 @@ regressitall (char **vname, double *eq, double *rhs, int m, int n)
     printf ("weight: %d\n", wt);
     for (k = 0; k < npow; ++k) {
       if (tweight[k] != wt)
-	continue;
+        continue;
       for (i = 0, j = 0; i < n; i++) {
-	if (tab[k][i] == 0)
-	  continue;
-	cols[j] = i;
-	++j;
+        if (tab[k][i] == 0)
+          continue;
+        cols[j] = i;
+        ++j;
       }
       squishx (teq, eq, m, n, cols, wt);
       yscore = regressit (ans, teq, rhs, m, wt);
       printf ("chisq: %9.3f\n", yscore);
       for (i = 0, j = 0; i < n; i++) {
-	if (tab[k][i] == 0)
-	  continue;
-	printf ("%15s %9.3f\n", vname[i], ans[j]);
-	++j;
+        if (tab[k][i] == 0)
+          continue;
+        printf ("%15s %9.3f\n", vname[i], ans[j]);
+        ++j;
       }
       printf ("\n");
     }
@@ -287,7 +287,7 @@ ptoz (double *p, double *z, int n)
   ZALLOC (w2, n, double);
 
   vst (w2, p, -1.0, n);
-  vsp (w2, w2, 1.0, n);		// q 
+  vsp (w2, w2, 1.0, n);         // q 
   vvd (w1, p, w2, n);
   vlog (z, w1, n);
   free (w1);
@@ -303,8 +303,8 @@ ztop (double *p, double *z, int n)
   ZALLOC (w1, n, double);
 
   vexp (ww, z, n);
-  vsp (w1, ww, 1.0, n);		// 1 + e^z 
-  vvd (p, ww, w1, n);		// p 
+  vsp (w1, ww, 1.0, n);         // 1 + e^z 
+  vvd (p, ww, w1, n);           // p 
 
   free (ww);
   free (w1);
@@ -312,7 +312,7 @@ ztop (double *p, double *z, int n)
 
 void
 calcgh (double *grad, double *hess, double *eq, double *z,
-	double *n0, double *n1, int neq, int nv)
+        double *n0, double *n1, int neq, int nv)
 {
 
 
@@ -343,7 +343,7 @@ calcgh (double *grad, double *hess, double *eq, double *z,
     vst (ww, eq + j * nv, x0[j], nv);
     vvm (grad, grad, ww, nv);
     vst (ww, eq + j * nv, sqrt (x1[j]), nv);
-    addouter (hess, ww, nv);	// actually -hess 
+    addouter (hess, ww, nv);    // actually -hess 
   }
   free (ww);
   free (w1);
@@ -517,7 +517,7 @@ qwmax1 (double *co, double *ans, int n, int col)
     a = 0;
     for (t = 0; t < n; ++t) {
       if (t == col)
-	continue;
+        continue;
       cc[a] = t;
       ++a;
     }
@@ -531,7 +531,7 @@ qwmax1 (double *co, double *ans, int n, int col)
     ans[col] = 0.0;
     for (t = 0; t < n; ++t) {
       if (t == col)
-	continue;
+        continue;
       ans[t] = aa[a];
       ++a;
     }
