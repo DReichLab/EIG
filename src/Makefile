@@ -12,16 +12,14 @@ override CFLAGS += -I ./nicksrc -I/n/app/openblas/0.3.28-gcc-14.2.0/include -I/n
 override LDFLAGS += -L/n/app/openblas/0.3.28-gcc-14.2.0/lib -L/n/app/gsl/2.8-gcc-14.2.0/lib/
 endif
 
-ifeq ($(OPTIMIZE), 1)
-	CFLAGS += -O2
-endif
-
 ifeq ($(DEBUG), 1)
-	CFLAGS += -g # enable debugging
+	override CFLAGS += -g # enable debugging
+else
+	override CFLAGS += -O2
 endif
 
 ifeq ($(PROFILING), 1)
-	CFLAGS += -pg # enable profiling
+	override CFLAGS += -pg # enable profiling
 endif
 
 ND=nicksrc
